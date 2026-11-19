@@ -8,6 +8,24 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import { MedicalReport } from '../types/family';
 
+const renderSummary = (val: any) => {
+  if (!val) return null;
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object') {
+    return (
+      <div className="space-y-1">
+        {Object.entries(val).map(([k, v]) => (
+          <div key={k} className="flex items-center gap-1.5 text-xs">
+            <span className="text-teal-400 font-mono text-[10px] uppercase font-bold">{k.replace(/_/g, ' ')}:</span>
+            <span className="text-slate-200">{typeof v === 'object' ? JSON.stringify(v) : String(v)}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return String(val);
+};
+
 export const MedicalReportsPage: React.FC = () => {
   const { user, token, role, isAuthenticated, loginAsDemoPatient } = useAuth();
 
@@ -204,12 +222,12 @@ export const MedicalReportsPage: React.FC = () => {
 
               {rep.extracted_summary && (
                 <div className="bg-slate-950 p-4 rounded-xl border border-slate-800/80 space-y-1">
-                  <span className="text-[10px] font-mono uppercase tracking-wider text-teal-400 font-bold">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-teal-400 font-bold block mb-1">
                     Diagnostic Summary & Clinical Findings
                   </span>
-                  <p className="text-xs text-slate-200 leading-relaxed">
-                    {rep.extracted_summary}
-                  </p>
+                  <div className="text-xs text-slate-200 leading-relaxed">
+                    {renderSummary(rep.extracted_summary)}
+                  </div>
                 </div>
               )}
 

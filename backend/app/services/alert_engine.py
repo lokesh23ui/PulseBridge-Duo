@@ -278,12 +278,6 @@ def evaluate_personalized_rules(
         if val is None:
             continue
 
-        # Cooldown check
-        if rule.last_triggered_at:
-            delta_sec = (now - rule.last_triggered_at).total_seconds()
-            if delta_sec < rule.cooldown_seconds:
-                continue
-
         # Evaluate condition
         triggered = False
         rule_desc = ""
@@ -303,6 +297,25 @@ def evaluate_personalized_rules(
                 rule_desc = f"{PARAMETER_LABELS.get(rule.parameter, rule.parameter)} {val} outside safe range [{rule.lower_limit} - {rule.upper_limit}] {PARAMETER_UNITS.get(rule.parameter, '')}"
 
         if triggered:
+            # Cooldown check (prevents duplicate alert notification spam)
+            if rule.last_triggered_at:
+                delta_sec = (now - rule.last_triggered_at).total_seconds()
+                if delta_sec < rule.cooldown_seconds:
+                    continue
+
+            # Persistence duration check (if persistence_seconds > 0)
+            if rule.persistence_seconds > 0:
+                cutoff_time = now - datetime.timedelta(seconds=rule.persistence_seconds)
+                prior_readings = db.query(SensorReading).filter(
+                    SensorReading.patient_id == reading.patient_id,
+                    SensorReading.timestamp >= cutoff_time,
+                    SensorReading.timestamp < now
+                ).order_by(SensorReading.timestamp.asc()).all()
+                
+                # If there are no prior abnormal readings spanning persistence duration, do not trigger alert yet
+                if not prior_readings or (now - prior_readings[0].timestamp).total_seconds() < rule.persistence_seconds:
+                    continue
+
             rule.last_triggered_at = now
             alert_id = f"alert-{uuid.uuid4().hex[:8]}"
 
@@ -366,5 +379,44 @@ def evaluate_personalized_rules(
             )
             notifications.append(patient_notif)
             db.add(patient_notif)
+
+        else:
+            # Recovery detection: if value is within normal limits but previous active alert exists
+            param_label = PARAMETER_LABELS.get(rule.parameter, rule.parameter)
+            active_alerts = db.query(HealthAlert).filter(
+                HealthAlert.patient_id == reading.patient_id,
+                HealthAlert.parameter == param_label,
+                HealthAlert.acknowledged == False
+            ).all()
+
+            if active_alerts:
+                # Mark as recovered and acknowledged
+                for a in active_alerts:
+                    a.acknowledged = True
+                    a.acknowledged_at = now
+                    a.verification_instruction += f" [RECOVERY: Stabilized at {val} {PARAMETER_UNITS.get(rule.parameter, '')}]"
+
+                # Notify connected caregivers of recovery
+                relationships = db.query(PatientCaregiverRelationship).filter(
+                    PatientCaregiverRelationship.patient_id == reading.patient_id,
+                    PatientCaregiverRelationship.status == "active"
+                ).all()
+
+                for rel in relationships:
+                    rec_notif = Notification(
+                        recipient_user_id=rel.caregiver_id,
+                        patient_id=reading.patient_id,
+                        title=f"Vital Recovered: {patient_name}",
+                        message=f"{patient_name}'s {param_label} has returned to safe range ({val} {PARAMETER_UNITS.get(rule.parameter, '')}).",
+                        severity="INFO",
+                        parameter=rule.parameter,
+                        value=float(val),
+                        unit=PARAMETER_UNITS.get(rule.parameter, ""),
+                        alert_id=active_alerts[0].alert_id,
+                        is_read=False,
+                        created_at=now
+                    )
+                    notifications.append(rec_notif)
+                    db.add(rec_notif)
 
     return alerts, notifications

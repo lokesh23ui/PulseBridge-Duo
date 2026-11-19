@@ -10,6 +10,33 @@ import { api } from '../services/api';
 import { SensorReading, HealthAlert } from '../types/telemetry';
 import { AlertRule, MedicalReport, AccessPermissions } from '../types/family';
 
+const renderSafeText = (val: any, fallback: string = ''): string => {
+  if (val === null || val === undefined) return fallback;
+  if (typeof val === 'string' || typeof val === 'number') return String(val);
+  if (typeof val === 'object') {
+    return val.name || val.phone || val.full_name || val.label || JSON.stringify(val);
+  }
+  return String(val);
+};
+
+const renderSummary = (val: any) => {
+  if (!val) return null;
+  if (typeof val === 'string') return val;
+  if (typeof val === 'object') {
+    return (
+      <div className="space-y-1">
+        {Object.entries(val).map(([k, v]) => (
+          <div key={k} className="flex items-center gap-1.5 text-xs">
+            <span className="text-teal-400 font-mono text-[10px] uppercase font-bold">{k.replace(/_/g, ' ')}:</span>
+            <span className="text-slate-200">{typeof v === 'object' ? JSON.stringify(v) : String(v)}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+  return String(val);
+};
+
 export const PatientMonitoringPage: React.FC = () => {
   const { patientId } = useParams<{ patientId: string }>();
   const numericPatientId = patientId ? parseInt(patientId, 10) : 0;
@@ -167,20 +194,20 @@ export const PatientMonitoringPage: React.FC = () => {
         <div className="p-6 bg-slate-900/90 border border-slate-800 rounded-2xl shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white text-2xl font-black shadow-lg">
-              {patientInfo.full_name?.charAt(0)}
+              {renderSafeText(patientInfo.full_name, 'P').charAt(0)}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold text-white">{patientInfo.full_name}</h1>
+                <h1 className="text-xl font-bold text-white">{renderSafeText(patientInfo.full_name, 'Patient')}</h1>
                 <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-bold">
                   CONNECTED PATIENT
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-1">
-                Age: <strong className="text-slate-200">{patientInfo.age || 72}</strong> • Blood Type: <strong className="text-slate-200">{patientInfo.blood_type || 'O+'}</strong>
+                Age: <strong className="text-slate-200">{renderSafeText(patientInfo.age, '72')}</strong> • Blood Type: <strong className="text-slate-200">{renderSafeText(patientInfo.blood_type, 'O+')}</strong>
               </p>
               <p className="text-xs text-slate-400 mt-0.5">
-                Surveillance Conditions: <strong className="text-slate-300">{patientInfo.medical_conditions || 'Mild Hypertension, Arrhythmia Surveillance'}</strong>
+                Surveillance Conditions: <strong className="text-slate-300">{renderSafeText(patientInfo.medical_conditions, 'Mild Hypertension, Arrhythmia Surveillance')}</strong>
               </p>
             </div>
           </div>
@@ -188,8 +215,8 @@ export const PatientMonitoringPage: React.FC = () => {
           <div className="flex flex-wrap items-center gap-3">
             <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-xs">
               <span className="text-slate-500 block text-[10px] uppercase font-mono">Emergency Contact</span>
-              <span className="text-slate-200 font-semibold">{patientInfo.emergency_contact_name || 'Marcus Vance'}</span>
-              <span className="text-slate-400 block text-[11px] font-mono">{patientInfo.emergency_contact_phone || '+1 (555) 019-2831'}</span>
+              <span className="text-slate-200 font-semibold">{renderSafeText(patientInfo.emergency_contact_name, 'Marcus Vance')}</span>
+              <span className="text-slate-400 block text-[11px] font-mono">{renderSafeText(patientInfo.emergency_contact_phone, '+1 (555) 019-2831')}</span>
             </div>
           </div>
         </div>
@@ -479,9 +506,9 @@ export const PatientMonitoringPage: React.FC = () => {
                       Provider: <strong className="text-slate-300">{rep.healthcare_provider || 'St. Jude Health'}</strong> • Date: {new Date(rep.report_date).toLocaleDateString()}
                     </p>
                     {rep.extracted_summary && (
-                      <p className="text-xs text-slate-300 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80 leading-relaxed">
-                        {rep.extracted_summary}
-                      </p>
+                      <div className="text-xs text-slate-300 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80 leading-relaxed">
+                        {renderSummary(rep.extracted_summary)}
+                      </div>
                     )}
                   </div>
                 ))

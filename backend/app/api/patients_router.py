@@ -198,6 +198,41 @@ def get_patient_history(
         "readings": readings
     }
 
+# 5b. Patient Health Trends (Requires view_health_trends permission)
+@router.get("/{patient_id}/trends")
+def get_patient_trends(
+    patient_id: int,
+    days: int = Query(7, ge=1, le=90),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    pid = verify_access_to_patient(current_user, patient_id, db, required_permission="view_health_trends")
+    cutoff = utc_now() - datetime.timedelta(days=days)
+
+    readings = db.query(SensorReading).filter(
+        (SensorReading.patient_id == pid) | (SensorReading.patient_id.is_(None)),
+        SensorReading.timestamp >= cutoff
+    ).all()
+
+    hr_vals = [r.heart_rate_bpm for r in readings if r.heart_rate_bpm is not None]
+    spo2_vals = [r.spo2_percent for r in readings if r.spo2_percent is not None]
+
+    return {
+        "patient_id": pid,
+        "time_window_days": days,
+        "sample_count": len(readings),
+        "heart_rate_trend": {
+            "min": min(hr_vals) if hr_vals else None,
+            "max": max(hr_vals) if hr_vals else None,
+            "avg": round(sum(hr_vals) / len(hr_vals), 1) if hr_vals else None,
+        },
+        "spo2_trend": {
+            "min": min(spo2_vals) if spo2_vals else None,
+            "max": max(spo2_vals) if spo2_vals else None,
+            "avg": round(sum(spo2_vals) / len(spo2_vals), 1) if spo2_vals else None,
+        }
+    }
+
 # 6. Patient Medical Reports (GET - requires view_medical_reports permission)
 @router.get("/{patient_id}/reports", response_model=List[MedicalReportResponse])
 def get_patient_reports(
@@ -210,6 +245,23 @@ def get_patient_reports(
         MedicalReport.patient_id == pid
     ).order_by(desc(MedicalReport.report_date)).all()
     return reports
+
+# 6b. Single Medical Report (GET - requires view_medical_reports permission)
+@router.get("/{patient_id}/reports/{report_id}", response_model=MedicalReportResponse)
+def get_single_patient_report(
+    patient_id: int,
+    report_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    pid = verify_access_to_patient(current_user, patient_id, db, required_permission="view_medical_reports")
+    report = db.query(MedicalReport).filter(
+        MedicalReport.id == report_id,
+        MedicalReport.patient_id == pid
+    ).first()
+    if not report:
+        raise HTTPException(status_code=404, detail="Medical report not found")
+    return report
 
 # 7. Patient Medical Reports (POST - patient only)
 @router.post("/{patient_id}/reports", response_model=MedicalReportResponse, status_code=status.HTTP_201_CREATED)

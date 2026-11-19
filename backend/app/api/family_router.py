@@ -9,7 +9,7 @@ from backend.app.models.entities import (
 )
 from backend.app.schemas.family import (
     InvitationResponse, RedeemInvitationRequest, 
-    RelationshipResponse, AccessPermissionSchema
+    RelationshipResponse, AccessPermissionSchema, ApproveRequestPayload
 )
 from backend.app.core.auth import get_current_user, require_patient, require_caregiver
 from backend.app.services.family_service import (
@@ -111,11 +111,21 @@ def list_relationships(
 @router.post("/requests/{id}/approve", response_model=RelationshipResponse)
 def approve_request_endpoint(
     id: int,
-    permissions: Optional[AccessPermissionSchema] = None,
+    payload: Optional[ApproveRequestPayload] = None,
     current_user: User = Depends(require_patient),
     db: Session = Depends(get_db)
 ):
-    rel = approve_relationship(db, current_user, id, permissions)
+    perms: Optional[AccessPermissionSchema] = None
+    if payload:
+        if payload.permissions:
+            perms = payload.permissions
+        else:
+            try:
+                perms = AccessPermissionSchema.model_validate(payload.model_dump())
+            except Exception:
+                pass
+
+    rel = approve_relationship(db, current_user, id, perms)
     patient = current_user
     caregiver = db.query(User).filter(User.id == rel.caregiver_id).first()
     return RelationshipResponse(

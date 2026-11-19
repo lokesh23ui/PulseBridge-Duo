@@ -14,6 +14,9 @@ from backend.app.schemas.telemetry import (
 )
 from backend.app.services.telemetry_service import ingest_reading
 from backend.app.core.thresholds import DEFAULT_THRESHOLDS
+from backend.app.core.auth import get_optional_user
+from backend.app.models.entities import User
+from backend.app.services.family_service import verify_caregiver_access
 from backend.app.api.websocket import manager
 
 router = APIRouter()
@@ -222,13 +225,29 @@ def get_alerts(
 
 # 7. Alert Acknowledgement
 @router.post("/alerts/{alert_id}/acknowledge", response_model=AlertAcknowledgeResponse)
-async def acknowledge_alert(alert_id: str, db: Session = Depends(get_db)):
+async def acknowledge_alert(
+    alert_id: str, 
+    current_user: Optional[User] = Depends(get_optional_user),
+    db: Session = Depends(get_db)
+):
     alert = db.query(HealthAlert).filter(HealthAlert.alert_id == alert_id).first()
     if not alert:
         raise HTTPException(status_code=404, detail="Alert not found")
     
+    # If the alert is associated with a specific patient and caller is authenticated
+    if alert.patient_id and current_user:
+        if current_user.role == "caregiver":
+            verify_caregiver_access(
+                db, 
+                caregiver_id=current_user.id, 
+                patient_id=alert.patient_id, 
+                required_permission="acknowledge_alerts"
+            )
+        elif current_user.id != alert.patient_id:
+            raise HTTPException(status_code=403, detail="Not authorized to acknowledge alert for this patient")
+
     alert.acknowledged = True
-    alert.acknowledged_at = datetime.datetime.now(datetime.timezone.utc).replace(tzinfo=None)
+    alert.acknowledged_at = utc_now()
     db.commit()
 
     await manager.broadcast({

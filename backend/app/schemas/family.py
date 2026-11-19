@@ -17,7 +17,7 @@ class RedeemInvitationRequest(BaseModel):
     relationship_label: Optional[str] = "Caregiver"
 
 class AccessPermissionSchema(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, extra="allow")
 
     view_live_readings: bool = True
     view_historical_readings: bool = True
@@ -26,6 +26,10 @@ class AccessPermissionSchema(BaseModel):
     create_manage_alert_rules: bool = False
     acknowledge_alerts: bool = True
     view_device_status: bool = True
+
+class ApproveRequestPayload(BaseModel):
+    model_config = ConfigDict(extra="allow")
+    permissions: Optional[AccessPermissionSchema] = None
 
 class RelationshipResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
