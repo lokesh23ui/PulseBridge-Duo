@@ -101,25 +101,36 @@ BIOMARKER_PATTERNS = [
 ]
 
 SYMPTOM_LEXICON = [
-    ("frequent urination", "Frequent urination (polyuria)"),
-    ("excessive thirst", "Excessive thirst (polydipsia)"),
-    ("extreme hunger", "Increased appetite (polyphagia)"),
-    ("fatigue", "Generalized persistent fatigue"),
-    ("lethargy", "Lethargy and weakness"),
-    ("blurred vision", "Visual blurring or disturbances"),
-    ("chest pain", "Chest discomfort or retrosternal tightness"),
-    ("chest tightness", "Chest tightness or constriction"),
-    ("shortness of breath", "Dyspnea / Shortness of breath"),
-    ("dyspnea", "Exertional dyspnea"),
-    ("dizziness", "Dizziness or orthostatic lightheadedness"),
-    ("palpitations", "Palpitations or rapid fluttering heartbeat"),
+    ("irregular heartbeat", "Irregular heartbeat rhythm"),
+    ("irregular pulse", "Irregular heartbeat rhythm"),
+    ("uneven pulse", "Irregular heartbeat rhythm"),
+    ("palpitation", "Heart palpitations"),
+    ("fluttering", "Heart palpitations"),
+    ("pounding heartbeat", "Heart palpitations"),
+    ("rapid heartbeat", "Rapid heartbeat"),
+    ("racing heartbeat", "Rapid heartbeat"),
+    ("tachycardia", "Rapid heartbeat"),
+    ("unusual fatigue", "Unusual fatigue or tiredness"),
+    ("fatigue", "Unusual fatigue or tiredness"),
+    ("tiredness", "Unusual fatigue or tiredness"),
+    ("dizziness", "Dizziness or lightheadedness"),
+    ("lightheadedness", "Dizziness or lightheadedness"),
+    ("shortness of breath", "Shortness of breath"),
+    ("dyspnea", "Shortness of breath"),
+    ("chest discomfort", "Chest discomfort or tightness"),
+    ("chest tightness", "Chest discomfort or tightness"),
+    ("weakness", "General weakness"),
+    ("general weakness", "General weakness"),
+    ("reduced exercise tolerance", "Reduced exercise tolerance"),
+    ("exercise intolerance", "Reduced exercise tolerance"),
+    ("feeling faint", "Feeling faint or near-fainting"),
+    ("faintness", "Feeling faint or near-fainting"),
+    ("syncope", "Feeling faint or near-fainting"),
+    ("anxiety", "Anxiety associated with noticeable heartbeat sensations"),
+    ("frequent urination", "Frequent urination"),
+    ("excessive thirst", "Excessive thirst"),
     ("swelling", "Peripheral edema or lower-extremity swelling"),
-    ("edema", "Peripheral fluid retention / edema"),
-    ("cough", "Persistent cough"),
-    ("headache", "Headaches"),
-    ("numbness", "Paresthesia / Numbness in extremities"),
-    ("tingling", "Peripheral tingling sensations"),
-    ("weight loss", "Unintentional weight loss")
+    ("edema", "Peripheral fluid retention / edema")
 ]
 
 def extract_text_from_file(file_bytes: bytes, filename: str, content_type: str) -> str:
@@ -178,6 +189,30 @@ def parse_report_text_to_findings(raw_text: str) -> Dict[str, Any]:
             "reference_range": "< 120 / < 80 mmHg",
             "status": status,
             "observation": f"Measured arterial pressure: {int(sys)} mmHg systolic, {int(dia)} mmHg diastolic."
+        })
+
+    # 1b. Check for ECG Rhythm Interpretation
+    ecg_match = re.search(r"(?:ecg\s+(?:rhythm|interpretation|findings?)|rhythm\s*[:=]|holter\s+(?:rhythm|findings?))\s*[:=]?\s*([A-Za-z0-9\s,\.\(\)-]{4,60})", raw_text, re.IGNORECASE)
+    if ecg_match:
+        ecg_text = ecg_match.group(1).strip()
+        is_afib = any(term in ecg_text.lower() for term in ["atrial fibrillation", "afib", "a-fib", "irregularly irregular"])
+        status = "Abnormal / Diagnostic AFib" if is_afib else ("Normal Sinus" if "sinus" in ecg_text.lower() else "Abnormal Rhythm")
+        findings.append({
+            "test_name": "ECG Rhythm Finding",
+            "value": ecg_text,
+            "unit": "Rhythm",
+            "reference_range": "Normal Sinus Rhythm",
+            "status": status,
+            "observation": f"Electrocardiogram rhythm documentation: {ecg_text}."
+        })
+    elif any(term in raw_text.lower() for term in ["atrial fibrillation", "afib"]):
+        findings.append({
+            "test_name": "ECG Rhythm Finding",
+            "value": "Atrial Fibrillation documented in report",
+            "unit": "Rhythm",
+            "reference_range": "Normal Sinus Rhythm",
+            "status": "Diagnostic ECG Finding",
+            "observation": "Report text documents Atrial Fibrillation rhythm."
         })
 
     # 2. Match standard numerical biomarkers

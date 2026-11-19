@@ -48,7 +48,8 @@ export const Footer: React.FC = () => {
               Experience
             </h4>
             <ul className="space-y-2 text-slate-600">
-              <li><Link to="/simulation" className="hover:text-teal-600 transition-colors">Simulation Studio</Link></li>
+              <li><Link to="/afib" className="hover:text-teal-600 transition-colors">AFib Overview</Link></li>
+              <li><Link to="/disease-analysis" className="hover:text-teal-600 transition-colors">AFib Analysis</Link></li>
               <li><Link to="/monitor" className="hover:text-teal-600 transition-colors">Live Monitoring</Link></li>
               <li><Link to="/insights" className="hover:text-teal-600 transition-colors">Health Insights</Link></li>
               <li><Link to="/about" className="hover:text-teal-600 transition-colors">Product Guide & Ethics</Link></li>

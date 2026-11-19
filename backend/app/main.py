@@ -39,7 +39,7 @@ def seed_demo_accounts_and_data(db):
 
         profile = PatientProfile(
             user_id=demo_patient.id,
-            age=72,
+            age=48,
             emergency_contact_name="Marcus Vance (Son)",
             emergency_contact_phone="+1 (555) 019-2831",
             blood_type="O+",
@@ -48,6 +48,12 @@ def seed_demo_accounts_and_data(db):
         db.add(profile)
         db.commit()
         db.refresh(demo_patient)
+    else:
+        # Ensure age and profile match prompt specifications
+        if demo_patient.patient_profile:
+            demo_patient.patient_profile.age = 48
+            demo_patient.patient_profile.medical_conditions = "Mild Hypertension, Nocturnal Arrhythmia Surveillance"
+            db.commit()
 
     # 2. Seed Demo Caregiver
     demo_caregiver = db.query(User).filter(User.email == "caregiver@pulsebridge.demo").first()
@@ -100,23 +106,128 @@ def seed_demo_accounts_and_data(db):
         db.add(perm)
         db.commit()
 
-    # 4. Seed Medical Report
-    if db.query(MedicalReport).filter(MedicalReport.patient_id == demo_patient.id).count() == 0:
-        db.add(MedicalReport(
+    # 4. Seed / Update Cardiovascular Holter & ECG Baseline Report for Eleanor Vance
+    cardio_report = db.query(MedicalReport).filter(
+        MedicalReport.patient_id == demo_patient.id,
+        MedicalReport.report_title == "Cardiovascular Holter & ECG Baseline"
+    ).first()
+    if not cardio_report:
+        cardio_report = MedicalReport(
             patient_id=demo_patient.id,
             report_title="Cardiovascular Holter & ECG Baseline",
             category="Cardiology",
             report_date=utc_now() - datetime.timedelta(days=7),
             healthcare_provider="St. Jude Heart & Vascular Center",
-            patient_notes="Annual baseline checkup. Advised continuous resting heart rate and nocturnal SpO2 surveillance.",
+            patient_notes="No sustained atrial fibrillation during 24-hour recording period. Sinus rhythm with occasional premature atrial contractions (PACs). Recommend 7-day Holter or wearable patch monitoring if palpitations recur.",
             extracted_summary={
+                "raw_text": (
+                    "24-Hour Ambulatory Holter ECG Monitoring Report. Indication: Palpitations and nocturnal arrhythmia surveillance. "
+                    "Findings: Predominant normal sinus rhythm with mean heart rate 74 bpm (range 58-112 bpm). "
+                    "No sustained atrial fibrillation (>30 seconds) observed during recording period. "
+                    "Isolated premature atrial complexes (PACs, 142 total, <1% of total beats). Occasional sinus arrhythmia. "
+                    "No high-grade AV block or ventricular tachyarrhythmias. "
+                    "Impression: No sustained AFib captured on 24-hour baseline. "
+                    "Recommend 7-day Holter or wearable patch monitoring if episodic palpitations recur."
+                ),
+                "findings": [
+                    {
+                        "test_name": "24-Hour ECG Rhythm Interpretation",
+                        "value": "Sinus Rhythm with Occasional PACs",
+                        "unit": "",
+                        "reference_range": "Normal Sinus Rhythm",
+                        "status": "Normal / Non-sustained PACs",
+                        "observation": "No sustained AFib during 24-hr recording. Occasional PACs noted."
+                    },
+                    {
+                        "test_name": "Resting Heart Rate",
+                        "value": 74.0,
+                        "unit": "bpm",
+                        "reference_range": "60 - 100 bpm",
+                        "status": "Normal",
+                        "observation": "Mean daytime resting heart rate 74 bpm."
+                    },
+                    {
+                        "test_name": "Thyroid Stimulating Hormone (TSH)",
+                        "value": 2.1,
+                        "unit": "mIU/L",
+                        "reference_range": "0.4 - 4.0 mIU/L",
+                        "status": "Normal",
+                        "observation": "Euthyroid; normal pituitary-thyroid axis."
+                    },
+                    {
+                        "test_name": "Serum Potassium (K+)",
+                        "value": 4.2,
+                        "unit": "mEq/L",
+                        "reference_range": "3.5 - 5.0 mEq/L",
+                        "status": "Normal",
+                        "observation": "Normal myocardial resting membrane stability."
+                    }
+                ],
                 "resting_hr_bpm": 74,
-                "ecg_status": "Normal Sinus Rhythm",
-                "recommended_max_hr": 115,
-                "min_spo2_threshold": 92
+                "ecg_status": "Normal Sinus Rhythm (PACs observed)"
             }
-        ))
+        )
+        db.add(cardio_report)
         db.commit()
+    else:
+        # Update notes and extracted summary to match prompt specifications
+        cardio_report.patient_notes = "No sustained atrial fibrillation during 24-hour recording period. Sinus rhythm with occasional premature atrial contractions (PACs). Recommend 7-day Holter or wearable patch monitoring if palpitations recur."
+        if not cardio_report.extracted_summary or "findings" not in cardio_report.extracted_summary:
+            cardio_report.extracted_summary = {
+                "raw_text": (
+                    "24-Hour Ambulatory Holter ECG Monitoring Report. Indication: Palpitations and nocturnal arrhythmia surveillance. "
+                    "Findings: Predominant normal sinus rhythm with mean heart rate 74 bpm (range 58-112 bpm). "
+                    "No sustained atrial fibrillation (>30 seconds) observed during recording period. "
+                    "Isolated premature atrial complexes (PACs, 142 total, <1% of total beats). Occasional sinus arrhythmia. "
+                    "No high-grade AV block or ventricular tachyarrhythmias. "
+                    "Impression: No sustained AFib captured on 24-hour baseline. "
+                    "Recommend 7-day Holter or wearable patch monitoring if episodic palpitations recur."
+                ),
+                "findings": [
+                    {
+                        "test_name": "24-Hour ECG Rhythm Interpretation",
+                        "value": "Sinus Rhythm with Occasional PACs",
+                        "unit": "",
+                        "reference_range": "Normal Sinus Rhythm",
+                        "status": "Normal / Non-sustained PACs",
+                        "observation": "No sustained AFib during 24-hr recording. Occasional PACs noted."
+                    },
+                    {
+                        "test_name": "Resting Heart Rate",
+                        "value": 74.0,
+                        "unit": "bpm",
+                        "reference_range": "60 - 100 bpm",
+                        "status": "Normal",
+                        "observation": "Mean daytime resting heart rate 74 bpm."
+                    },
+                    {
+                        "test_name": "Thyroid Stimulating Hormone (TSH)",
+                        "value": 2.1,
+                        "unit": "mIU/L",
+                        "reference_range": "0.4 - 4.0 mIU/L",
+                        "status": "Normal",
+                        "observation": "Euthyroid; normal pituitary-thyroid axis."
+                    },
+                    {
+                        "test_name": "Serum Potassium (K+)",
+                        "value": 4.2,
+                        "unit": "mEq/L",
+                        "reference_range": "3.5 - 5.0 mEq/L",
+                        "status": "Normal",
+                        "observation": "Normal myocardial resting membrane stability."
+                    }
+                ],
+                "resting_hr_bpm": 74,
+                "ecg_status": "Normal Sinus Rhythm (PACs observed)"
+            }
+            db.commit()
+
+    # Clean up any legacy diabetes-specific reports
+    db.query(MedicalReport).filter(
+        MedicalReport.patient_id == demo_patient.id,
+        MedicalReport.category == "Endocrinology & Metabolic"
+    ).delete(synchronize_session=False)
+    db.commit()
 
     # 5. Seed Alert Rule
     if db.query(AlertRule).filter(AlertRule.patient_id == demo_patient.id).count() == 0:
@@ -133,87 +244,56 @@ def seed_demo_accounts_and_data(db):
         ))
         db.commit()
 
-    # 6. Seed Baseline Clinical Symptoms for Eleanor Vance
-    if db.query(PatientSymptom).filter(PatientSymptom.patient_id == demo_patient.id).count() == 0:
-        db.add_all([
-            PatientSymptom(
-                patient_id=demo_patient.id,
-                recorded_by_user_id=demo_patient.id,
-                symptom_name="Frequent urination (polyuria)",
-                duration="2 weeks",
-                severity="Mild",
-                frequency="Intermittent",
-                notes="Noticeable during evening and night hours."
-            ),
-            PatientSymptom(
-                patient_id=demo_patient.id,
-                recorded_by_user_id=demo_patient.id,
-                symptom_name="Excessive thirst (polydipsia)",
-                duration="10 days",
-                severity="Mild",
-                frequency="Occasional",
-                notes="Dry mouth upon waking, increased water consumption."
-            ),
-            PatientSymptom(
-                patient_id=demo_patient.id,
-                recorded_by_user_id=demo_patient.id,
-                symptom_name="Exertional fatigue",
-                duration="1 month",
-                severity="Moderate",
-                frequency="Constant",
-                notes="Tires easily after climbing stairs or brisk walks."
-            )
-        ])
-        db.commit()
+    # 6. Seed / Update Baseline Clinical Symptoms for Eleanor Vance (AFib specific)
+    # Remove any old diabetes symptoms
+    for old_symptom in ["Frequent urination (polyuria)", "Excessive thirst (polydipsia)", "Exertional fatigue"]:
+        db.query(PatientSymptom).filter(
+            PatientSymptom.patient_id == demo_patient.id,
+            PatientSymptom.symptom_name == old_symptom
+        ).delete(synchronize_session=False)
+    db.commit()
 
-    # 7. Seed Comprehensive Metabolic Report
-    if db.query(MedicalReport).filter(MedicalReport.patient_id == demo_patient.id, MedicalReport.category == "Endocrinology & Metabolic").count() == 0:
-        db.add(MedicalReport(
-            patient_id=demo_patient.id,
-            report_title="Annual Comprehensive Metabolic & Lipid Panel",
-            category="Endocrinology & Metabolic",
-            report_date=utc_now() - datetime.timedelta(days=14),
-            healthcare_provider="Quest Diagnostics Metro Regional Lab",
-            patient_notes="Routine annual evaluation. Fasting glucose slightly elevated above baseline.",
-            extracted_summary={
-                "raw_text": "Metabolic panel indicates Fasting Blood Glucose of 118 mg/dL (Impaired Fasting Glucose / Prediabetes tier). HbA1c is 5.9%. Serum Creatinine 0.9 mg/dL. eGFR 78 mL/min/1.73m2. Total Cholesterol 210 mg/dL.",
-                "findings": [
-                    {
-                        "test_name": "Fasting Blood Glucose",
-                        "value": 118.0,
-                        "unit": "mg/dL",
-                        "reference_range": "70 - 99 mg/dL",
-                        "status": "Impaired (Prediabetes)",
-                        "observation": "Fasting plasma glucose in impaired fasting glucose tier (100 - 125 mg/dL)."
-                    },
-                    {
-                        "test_name": "Glycated Hemoglobin (HbA1c)",
-                        "value": 5.9,
-                        "unit": "%",
-                        "reference_range": "< 5.7%",
-                        "status": "Prediabetes",
-                        "observation": "HbA1c indicates borderline prediabetic range (5.7% - 6.4%)."
-                    },
-                    {
-                        "test_name": "Serum Creatinine",
-                        "value": 0.9,
-                        "unit": "mg/dL",
-                        "reference_range": "0.7 - 1.2 mg/dL",
-                        "status": "Normal",
-                        "observation": "Normal renal excretion."
-                    },
-                    {
-                        "test_name": "Total Cholesterol",
-                        "value": 210.0,
-                        "unit": "mg/dL",
-                        "reference_range": "< 200 mg/dL",
-                        "status": "Borderline",
-                        "observation": "Borderline elevation in circulating lipids."
-                    }
-                ]
-            }
-        ))
-        db.commit()
+    # Ensure the 3 AFib symptoms exist for Eleanor Vance
+    afib_seed_symptoms = [
+        {
+            "symptom_name": "Irregular heartbeat rhythm",
+            "duration": "2 weeks",
+            "severity": "Moderate",
+            "frequency": "Intermittent",
+            "notes": "Patient notices irregular, fluttering sensations in the chest at rest."
+        },
+        {
+            "symptom_name": "Heart palpitations",
+            "duration": "10 days",
+            "severity": "Moderate",
+            "frequency": "Occasional",
+            "notes": "Pounding sensation in chest after climbing stairs or in the evening."
+        },
+        {
+            "symptom_name": "Unusual fatigue or tiredness",
+            "duration": "1 month",
+            "severity": "Mild",
+            "frequency": "Intermittent",
+            "notes": "Unexplained exhaustion and reduced energy during normal activities."
+        }
+    ]
+    for sym_data in afib_seed_symptoms:
+        exists = db.query(PatientSymptom).filter(
+            PatientSymptom.patient_id == demo_patient.id,
+            PatientSymptom.symptom_name == sym_data["symptom_name"]
+        ).first()
+        if not exists:
+            db.add(PatientSymptom(
+                patient_id=demo_patient.id,
+                recorded_by_user_id=demo_patient.id,
+                symptom_name=sym_data["symptom_name"],
+                duration=sym_data["duration"],
+                severity=sym_data["severity"],
+                frequency=sym_data["frequency"],
+                notes=sym_data["notes"],
+                is_active=True
+            ))
+    db.commit()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

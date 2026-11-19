@@ -4,7 +4,7 @@ export interface MedicalReference {
   url: string;
 }
 
-export interface GlobalDiabetesStat {
+export interface GlobalAFibStat {
   statistic: string;
   description: string;
   reporting_year: number;
@@ -14,48 +14,75 @@ export interface GlobalDiabetesStat {
   projection_note?: string;
 }
 
-export interface DiabetesParameterRef {
+export interface AFibParameterRef {
   parameter_name: string;
+  clinical_role: string;
   unit: string;
-  normal_reference_range: string;
-  impaired_prediabetes_range: string;
-  diagnostic_threshold: string;
-  treatment_target: string;
-  abnormal_indication: string;
-  measurement_source: string;
-  wokwi_compatibility: string;
-  requires_clinical_test: boolean;
+  data_source: string;
+  clinical_limitation: string;
+  clinical_relevance?: string;
+  is_diagnostic?: boolean;
+}
+
+export interface AFibSymptomItem {
+  id: string;
+  name: string;
+  short_description: string;
+  clinical_note: string;
+  is_primary: boolean;
+}
+
+export interface AFibClinicalType {
+  type: string;
+  duration_and_pattern: string;
+  clinical_characteristics: string;
+  management_focus: string;
+}
+
+export interface AFibTreatmentOverview {
+  rate_control: string;
+  rhythm_control: string;
+  anticoagulation: string;
+  cardioversion: string;
+  catheter_ablation: string;
+  surgical_interventions?: string;
 }
 
 export interface DiseaseKnowledgeItem {
   id: string;
   name: string;
+  short_name?: string;
   category: string;
   short_description: string;
-  what_happens_in_body: string;
+  what_happens_in_heart?: string;
+  what_happens_in_body?: string;
+  types_of_afib?: AFibClinicalType[];
   common_symptoms: string[];
-  risk_factors: string[];
-  relevant_patient_characteristics: string[];
-  relevant_report_biomarkers: string[];
-  relevant_health_parameters: string[];
-  diagnostic_tests: string[];
-  important_warning_signs: string[];
-  prevention_management: string;
+  symptom_catalogue?: AFibSymptomItem[];
+  causes_and_risk_factors?: string[];
+  risk_factors?: string[];
+  diagnostic_methods?: string[];
+  diagnostic_tests?: string[];
+  possible_complications?: string[];
+  treatment_overview?: AFibTreatmentOverview | Record<string, string>;
+  lifestyle_and_management?: string;
+  when_to_seek_urgent_medical_attention?: string;
   medical_references: MedicalReference[];
   overview_route?: string | null;
 }
 
-export interface DiabetesOverviewData {
+export interface AFibOverviewData {
   disease_info: DiseaseKnowledgeItem;
   global_statistics: {
     title: string;
-    key_metrics: GlobalDiabetesStat[];
+    key_metrics: GlobalAFibStat[];
     public_health_summary: string;
   };
-  parameter_references: DiabetesParameterRef[];
+  parameter_references: AFibParameterRef[];
+  symptoms: AFibSymptomItem[];
 }
 
-export interface PatientDiabetesRelation {
+export interface PatientAFibRelation {
   patient: {
     id: number;
     full_name: string;
@@ -64,14 +91,17 @@ export interface PatientDiabetesRelation {
     blood_type: string | null;
     medical_conditions: string | null;
   };
-  how_diabetes_relates: {
+  how_afib_relates: {
     relevant_patient_details: string[];
     matching_symptoms: {
       symptom_name: string;
       severity: string;
       duration?: string;
       frequency?: string;
+      notes?: string;
+      is_primary?: boolean;
     }[];
+    has_matching_symptoms: boolean;
     relevant_report_findings: {
       report_title: string;
       report_date?: string;
@@ -79,36 +109,36 @@ export interface PatientDiabetesRelation {
       value: number | string;
       unit: string;
       status: string;
+      observation?: string;
     }[];
-    has_lab_glucose_results: boolean;
     missing_clinical_data: string[];
     doctor_review_points: string[];
   };
-  lab_glucose_results: {
-    report_title: string;
-    report_date?: string;
-    test_name: string;
-    value: number | string;
-    unit: string;
-    status: string;
-  }[];
-  simulated_glucose_telemetry?: {
-    value: number;
-    unit: string;
-    source: string;
-    timestamp?: string;
+  emergency_warning: string;
+  wokwi_simulation_info: {
     warning_label: string;
     clinical_caution: string;
-  } | null;
-  recent_vitals: {
-    heart_rate_bpm?: number | null;
-    spo2_percent?: number | null;
-    bp_systolic_mmhg?: number | null;
-    bp_diastolic_mmhg?: number | null;
-    timestamp?: string | null;
-    is_simulated: boolean;
+    latest_vitals: {
+      heart_rate_bpm?: number | null;
+      spo2_percent?: number | null;
+      bp_systolic_mmhg?: number | null;
+      bp_diastolic_mmhg?: number | null;
+      timestamp?: string | null;
+      is_simulated: boolean;
+      source: string;
+    };
   };
+  symptoms_catalogue: AFibSymptomItem[];
 }
+
+export type AFibMatchLevel =
+  | 'Relevant findings identified'
+  | 'Some relevant findings identified'
+  | 'Insufficient information'
+  | 'No relevant findings identified'
+  | 'ECG confirmation documented in uploaded records'
+  | 'Some matching information'
+  | 'No meaningful match identified';
 
 export interface PatientSymptom {
   id: number;
@@ -146,11 +176,19 @@ export interface ReportExtractionDraft {
 export interface DiseaseMatchResult {
   disease_id: string;
   disease_name: string;
+  short_name?: string;
   category: string;
   short_description: string;
-  match_level: 'Relevant findings identified' | 'Some matching information' | 'Insufficient information' | 'No meaningful match identified';
-  match_score_rank: number;
+  match_level: AFibMatchLevel;
+  match_score_rank?: number;
+  ecg_confirmation_documented?: boolean;
+  ecg_confirmation_details?: {
+    report_title: string;
+    report_date: string;
+    finding: string;
+  } | null;
   matching_symptoms: string[];
+  has_primary_irregular_rhythm_symptom?: boolean;
   relevant_patient_details: string[];
   relevant_report_findings: {
     report: string;
@@ -161,10 +199,13 @@ export interface DiseaseMatchResult {
   relevant_parameter_observations: string[];
   missing_information: string[];
   reason_included: string;
-  recommended_next_assessments: string[];
+  suggested_next_assessments?: string[];
+  recommended_next_assessments?: string[];
+  emergency_warning_triggered?: boolean;
+  emergency_warning_text?: string | null;
   medical_references: MedicalReference[];
   overview_route?: string | null;
-  important_warning_signs: string[];
+  important_warning_signs?: string[];
 }
 
 export interface DiseaseAnalysisRunResponse {
@@ -193,3 +234,9 @@ export interface DiseaseAnalysisSummary {
   clinical_notes?: string;
   created_at: string;
 }
+
+// Backward-compatibility aliases
+export type DiabetesOverviewData = AFibOverviewData;
+export type PatientDiabetesRelation = PatientAFibRelation;
+export type GlobalDiabetesStat = GlobalAFibStat;
+export type DiabetesParameterRef = AFibParameterRef;

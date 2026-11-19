@@ -84,20 +84,27 @@ class DiseaseKnowledgeItem(BaseModel):
 class DiseaseMatchResult(BaseModel):
     disease_id: str
     disease_name: str
+    short_name: Optional[str] = "AFib"
     category: str
     short_description: str
-    match_level: str  # "Relevant findings identified", "Some matching information", "Insufficient information", "No meaningful match identified"
-    match_score_rank: int
+    match_level: str  # "Relevant findings identified", "Some relevant findings identified", "Insufficient information", "No relevant findings identified", "ECG confirmation documented in uploaded records"
+    match_score_rank: Optional[int] = 1
+    ecg_confirmation_documented: Optional[bool] = False
+    ecg_confirmation_details: Optional[Dict[str, Any]] = None
     matching_symptoms: List[str] = []
+    has_primary_irregular_rhythm_symptom: Optional[bool] = False
     relevant_patient_details: List[str] = []
     relevant_report_findings: List[Dict[str, Any]] = []
     relevant_parameter_observations: List[str] = []
     missing_information: List[str] = []
     reason_included: str
-    recommended_next_assessments: List[str] = []
+    suggested_next_assessments: Optional[List[str]] = []
+    recommended_next_assessments: Optional[List[str]] = []
+    emergency_warning_triggered: Optional[bool] = False
+    emergency_warning_text: Optional[str] = None
     medical_references: List[MedicalReference] = []
     overview_route: Optional[str] = None
-    important_warning_signs: List[str] = []
+    important_warning_signs: Optional[List[str]] = []
 
 class DiseaseAnalysisRunResponse(BaseModel):
     analysis_id: str

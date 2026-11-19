@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { MonitoringProvider } from './context/MonitoringContext';
 import { AuthProvider } from './context/AuthContext';
 import { Header } from './components/Header';
@@ -23,7 +23,7 @@ import { PatientMonitoringPage } from './pages/PatientMonitoringPage';
 import { MedicalReportsPage } from './pages/MedicalReportsPage';
 
 // Disease Intelligence Pages
-import { DiabetesOverviewPage } from './pages/DiabetesOverviewPage';
+import { AFibOverviewPage } from './pages/AFibOverviewPage';
 import { DiseaseAnalysisPage } from './pages/DiseaseAnalysisPage';
 
 export const App: React.FC = () => {
@@ -39,10 +39,11 @@ export const App: React.FC = () => {
                 <Route path="/devices" element={<DevicesExplorerPage />} />
                 <Route path="/devices/ring" element={<RingPage />} />
                 <Route path="/devices/watch" element={<WatchPage />} />
-                <Route path="/simulation" element={<SimulationStudioPage />} />
+                <Route path="/simulation" element={<Navigate to="/monitor" replace />} />
                 <Route path="/monitor" element={<LiveMonitoringPage />} />
                 <Route path="/insights" element={<HealthInsightsPage />} />
-                <Route path="/diabetes" element={<DiabetesOverviewPage />} />
+                <Route path="/afib" element={<AFibOverviewPage />} />
+                <Route path="/diabetes" element={<AFibOverviewPage />} />
                 <Route path="/disease-analysis" element={<DiseaseAnalysisPage />} />
                 <Route path="/technology" element={<AboutPage />} />
                 <Route path="/about" element={<AboutPage />} />

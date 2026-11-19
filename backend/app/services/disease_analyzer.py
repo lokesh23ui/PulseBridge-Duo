@@ -1,13 +1,14 @@
 """
-PulseBridge Duo — Patient-to-Disease Clinical Comparison Engine
-Provides transparent, deterministic, rule-based medical decision support without fabricated probabilities.
+PulseBridge Duo — Patient-to-Disease Clinical Comparison Engine: Atrial Fibrillation (AFib) Only
+Transparent, deterministic evaluation strictly aligned with ACC/AHA/HRS and ESC guidelines.
 """
 
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone
 from backend.app.services.disease_knowledge_base import (
-    DISEASE_KNOWLEDGE_BASE,
-    DIABETES_PARAMETER_REFERENCES
+    ATRIAL_FIBRILLATION_KNOWLEDGE_ITEM,
+    AFIB_PARAMETER_REFERENCES,
+    AFIB_SYMPTOM_CATALOGUE
 )
 
 CLINICAL_DISCLAIMER = (
@@ -15,262 +16,215 @@ CLINICAL_DISCLAIMER = (
     "Only a qualified healthcare professional can diagnose a condition."
 )
 
-def evaluate_patient_against_disease(
-    disease: Dict[str, Any],
+EMERGENCY_WARNING_TEXT = (
+    "EMERGENCY SAFETY NOTICE: If you or the patient experience a fast or irregular heartbeat "
+    "accompanied by CHEST PAIN, SEVERE BREATHING DIFFICULTY, FAINTING, or signs of a STROKE "
+    "(facial drooping, arm weakness, speech difficulty — BE-FAST), CALL EMERGENCY SERVICES (911 / 112) IMMEDIATELY."
+)
+
+def evaluate_patient_for_afib(
     patient_profile: Optional[Dict[str, Any]],
     symptoms: List[Dict[str, Any]],
     reports: List[Dict[str, Any]],
     latest_reading: Optional[Dict[str, Any]]
 ) -> Dict[str, Any]:
     """
-    Compares a single patient's clinical profile, symptoms, reports, and parameters against a disease definition.
-    Excludes simulated telemetry from genuine clinical evidence.
+    Evaluates an individual patient's records strictly and exclusively for Atrial Fibrillation (AFib).
+    Does not produce fabricated percentages or probabilities.
+    Excludes simulated Wokwi potentiometer data from clinical evidence.
     """
     matching_symptoms: List[str] = []
     relevant_patient_details: List[str] = []
     relevant_report_findings: List[Dict[str, Any]] = []
     relevant_parameter_observations: List[str] = []
     missing_information: List[str] = []
-    score = 0
 
+    has_irregular_heartbeat_symptom = False
+    has_palpitations_or_rapid_hr = False
+    has_secondary_symptoms = False
+    has_chest_pain_or_fainting = False
+
+    ecg_confirmation_documented = False
+    ecg_confirmation_details: Optional[Dict[str, Any]] = None
+
+    # 1. Evaluate Reported Symptoms
+    for sym in symptoms:
+        s_name = sym.get("symptom_name", "").strip()
+        s_lower = s_name.lower()
+        sev = sym.get("severity", "Moderate")
+        dur = sym.get("duration", "unspecified")
+
+        # Check for Primary Symptom: Irregular Heartbeat Rhythm
+        if any(term in s_lower for term in ["irregular heartbeat", "irregular pulse", "uneven pulse", "uneven heartbeat", "arrhythmia", "skipped beat"]):
+            matching_symptoms.append(f"{s_name} (Primary AFib indicator; Severity: {sev}, Duration: {dur})")
+            has_irregular_heartbeat_symptom = True
+
+        elif any(term in s_lower for term in ["palpitation", "fluttering", "pounding", "racing heartbeat", "rapid heartbeat", "tachycardia"]):
+            matching_symptoms.append(f"{s_name} (Rhythm sensation; Severity: {sev}, Duration: {dur})")
+            has_palpitations_or_rapid_hr = True
+
+        elif any(term in s_lower for term in ["fatigue", "tiredness", "dizziness", "lightheaded", "shortness of breath", "dyspnea", "weakness", "exercise tolerance", "faint", "anxiety"]):
+            matching_symptoms.append(f"{s_name} (Associated symptom; Severity: {sev}, Duration: {dur})")
+            has_secondary_symptoms = True
+            if any(term in s_lower for term in ["faint", "syncope", "near-faint"]):
+                has_chest_pain_or_fainting = True
+
+        elif any(term in s_lower for term in ["chest discomfort", "chest tightness", "chest pain"]):
+            matching_symptoms.append(f"{s_name} (Requires clinical evaluation to rule out acute ischemia; Severity: {sev})")
+            has_chest_pain_or_fainting = True
+
+    # 2. Evaluate Uploaded Medical Reports for ECG Confirmation & Findings
+    for rep in reports:
+        rep_title = rep.get("report_title", "Medical Report")
+        rep_date = rep.get("report_date", "Date unrecorded")
+        summary = rep.get("extracted_summary") or {}
+        raw_text = ""
+
+        if isinstance(summary, dict):
+            raw_text = (summary.get("raw_text") or "").lower()
+            findings_list = summary.get("findings", [])
+        else:
+            findings_list = []
+
+        combined_text = f"{rep_title.lower()} {raw_text}"
+
+        # Check for explicit ECG documentation of AFib
+        if any(term in combined_text for term in ["atrial fibrillation", "afib", "a-fib", "irregularly irregular rhythm", "paroxysmal af"]):
+            ecg_confirmation_documented = True
+            ecg_confirmation_details = {
+                "report_title": rep_title,
+                "report_date": rep_date,
+                "finding": "Electrocardiogram documentation notes Atrial Fibrillation / irregularly irregular rhythm."
+            }
+            relevant_report_findings.append({
+                "report": rep_title,
+                "date": rep_date,
+                "finding": "ECG documented Atrial Fibrillation rhythm",
+                "clinical_interpretation": "Explicit rhythm documentation on file."
+            })
+        elif "ecg" in combined_text or "holter" in combined_text:
+            relevant_report_findings.append({
+                "report": rep_title,
+                "date": rep_date,
+                "finding": "Cardiac telemetry / ECG baseline record",
+                "clinical_interpretation": "Cardiac rhythm recording uploaded; review with clinical specialist."
+            })
+
+
+
+    # 3. Evaluate Patient Profile & Cardiovascular Medical History
     age = patient_profile.get("age") if patient_profile else None
     medical_conditions = (patient_profile.get("medical_conditions") or "").lower() if patient_profile else ""
 
-    # 1. Evaluate Symptoms
-    disease_symptoms_lower = [s.lower() for s in disease.get("common_symptoms", [])]
-    for sym in symptoms:
-        sym_name = sym.get("symptom_name", "").lower()
-        matched = False
-        for ds in disease_symptoms_lower:
-            # Substring or token overlap
-            tokens = [t for t in sym_name.split() if len(t) > 3]
-            if sym_name in ds or any(token in ds for token in tokens):
-                matching_symptoms.append(f"{sym.get('symptom_name')} (Severity: {sym.get('severity', 'Moderate')}, Duration: {sym.get('duration', 'N/A')})")
-                score += 3
-                matched = True
-                break
+    if age and age >= 65:
+        relevant_patient_details.append(f"Age {age} years is a significant non-modifiable risk factor (prevalence exceeds 5-10% in older demographics).")
+    elif age and age >= 50:
+        relevant_patient_details.append(f"Age {age} years provides baseline cardiovascular epidemiological context.")
 
-    # 2. Evaluate Patient Demographics & Known Medical Conditions
-    if disease["id"] == "diabetes_mellitus":
-        if age and age >= 45:
-            relevant_patient_details.append(f"Patient age ({age} years) is within the elevated risk tier for metabolic disorders (>= 45 yrs).")
-            score += 1
-        if "hypertension" in medical_conditions or "high blood pressure" in medical_conditions:
-            relevant_patient_details.append("Documented history of hypertension (a frequent comorbidity that elevates cardiovascular and microvascular risks).")
-            score += 2
+    if "hypertension" in medical_conditions or "high blood pressure" in medical_conditions:
+        relevant_patient_details.append("Documented history of hypertension (the most prevalent modifiable risk factor for atrial remodeling and stroke).")
+    if "arrhythmia" in medical_conditions or "nocturnal arrhythmia" in medical_conditions:
+        relevant_patient_details.append(f"Existing profile medical history: '{patient_profile.get('medical_conditions')}'.")
+    if "coronary" in medical_conditions or "cad" in medical_conditions:
+        relevant_patient_details.append("Documented coronary artery disease history.")
+    if "heart failure" in medical_conditions:
+        relevant_patient_details.append("Pre-existing heart failure (bidirectional risk with Atrial Fibrillation).")
+    if "sleep apnea" in medical_conditions:
+        relevant_patient_details.append("Obstructive sleep apnea (associated with nocturnal hypoxemia and autonomic surges).")
 
-    elif disease["id"] == "hypertension":
-        if age and age >= 50:
-            relevant_patient_details.append(f"Patient age ({age} years) correlates with age-associated vascular stiffness.")
-            score += 1
-        if "hypertension" in medical_conditions:
-            relevant_patient_details.append("Patient profile records pre-existing mild hypertension diagnosis.")
-            score += 4
-
-    elif disease["id"] == "coronary_artery_disease":
-        if age and age >= 55:
-            relevant_patient_details.append(f"Patient age ({age} years) is within the demographic window for coronary risk evaluation.")
-            score += 1
-        if "arrhythmia" in medical_conditions or "cardiovascular" in medical_conditions or "hypertension" in medical_conditions:
-            relevant_patient_details.append(f"Recorded cardiovascular history: '{patient_profile.get('medical_conditions')}'.")
-            score += 2
-
-    elif disease["id"] == "stroke":
-        if age and age >= 65:
-            relevant_patient_details.append(f"Advancing age ({age} years) is a primary non-modifiable risk factor for cerebrovascular events.")
-            score += 1
-        if "arrhythmia" in medical_conditions:
-            relevant_patient_details.append("Documented nocturnal arrhythmia surveillance warrants assessment of stroke / cardioembolic risk.")
-            score += 2
-
-    elif disease["id"] == "chronic_kidney_disease":
-        if age and age >= 60:
-            relevant_patient_details.append(f"Patient age ({age} years) warrants routine renal filtration screening.")
-            score += 1
-        if "hypertension" in medical_conditions or "diabetes" in medical_conditions:
-            relevant_patient_details.append("Chronic hypertension or metabolic stress accelerates glomerular capillary sclerosis.")
-            score += 2
-
-    elif disease["id"] == "copd":
-        if age and age >= 40:
-            relevant_patient_details.append(f"Patient age ({age} years) meets age threshold for exertional airflow assessment.")
-
-    elif disease["id"] == "heart_failure":
-        if age and age >= 65:
-            relevant_patient_details.append(f"Patient age ({age} years) aligns with highest incidence cohort for heart failure.")
-            score += 1
-        if "arrhythmia" in medical_conditions or "hypertension" in medical_conditions:
-            relevant_patient_details.append("Recorded arrhythmia or hypertensive history contributes to ventricular workload.")
-            score += 2
-
-    # 3. Evaluate Uploaded Medical Reports (Biomarkers & Clinical Findings)
-    disease_biomarkers = [b.lower() for b in disease.get("relevant_report_biomarkers", [])]
-    has_relevant_report = False
-
-    for rep in reports:
-        summary = rep.get("extracted_summary") or {}
-        rep_date = rep.get("report_date", "Date unrecorded")
-        rep_title = rep.get("report_title", "Medical Report")
-
-        # If summary is a dict of findings
-        if isinstance(summary, dict):
-            findings_list = summary.get("findings", [])
-            # Also check flat keys in summary
-            if not findings_list:
-                for k, v in summary.items():
-                    if k in ["resting_hr_bpm", "ecg_status", "recommended_max_hr", "min_spo2_threshold"]:
-                        findings_list.append({"test_name": k.replace("_", " ").title(), "value": v, "unit": ""})
-
-            for f in findings_list:
-                t_name = str(f.get("test_name", "")).lower()
-                val = f.get("value")
-                status = f.get("status", "Normal")
-
-                # Check relevance to this disease
-                if disease["id"] == "diabetes_mellitus" and any(k in t_name for k in ["glucose", "hba1c", "fbg", "sugar"]):
-                    relevant_report_findings.append({
-                        "report": rep_title,
-                        "date": rep_date,
-                        "finding": f"{f.get('test_name')}: {val} {f.get('unit', '')}",
-                        "clinical_interpretation": f"Laboratory finding status: {status}"
-                    })
-                    score += 5
-                    has_relevant_report = True
-
-                elif disease["id"] in ["hypertension", "coronary_artery_disease", "heart_failure"] and any(k in t_name for k in ["blood pressure", "bp", "ecg", "heart rate", "troponin", "cholesterol", "lipid"]):
-                    relevant_report_findings.append({
-                        "report": rep_title,
-                        "date": rep_date,
-                        "finding": f"{f.get('test_name')}: {val} {f.get('unit', '')}",
-                        "clinical_interpretation": f"Cardiovascular parameter finding: {status}"
-                    })
-                    score += 3
-                    has_relevant_report = True
-
-                elif disease["id"] == "chronic_kidney_disease" and any(k in t_name for k in ["creatinine", "egfr", "bun", "albumin", "protein"]):
-                    relevant_report_findings.append({
-                        "report": rep_title,
-                        "date": rep_date,
-                        "finding": f"{f.get('test_name')}: {val} {f.get('unit', '')}",
-                        "clinical_interpretation": f"Renal function marker status: {status}"
-                    })
-                    score += 4
-                    has_relevant_report = True
-
-                elif disease["id"] == "anaemia" and any(k in t_name for k in ["hemoglobin", "hematocrit", "ferritin", "iron", "cbc"]):
-                    relevant_report_findings.append({
-                        "report": rep_title,
-                        "date": rep_date,
-                        "finding": f"{f.get('test_name')}: {val} {f.get('unit', '')}",
-                        "clinical_interpretation": f"Hematologic marker: {status}"
-                    })
-                    score += 4
-                    has_relevant_report = True
-
-                elif disease["id"] == "thyroid_disorders" and any(k in t_name for k in ["tsh", "t4", "t3", "thyroid"]):
-                    relevant_report_findings.append({
-                        "report": rep_title,
-                        "date": rep_date,
-                        "finding": f"{f.get('test_name')}: {val} {f.get('unit', '')}",
-                        "clinical_interpretation": f"Thyroid panel observation: {status}"
-                    })
-                    score += 4
-                    has_relevant_report = True
-
-    # 4. Evaluate Health Parameters & Sensor Readings
-    # NOTE: Strictly differentiate between Genuine Clinical Readings and Simulated Potentiometer Telemetry!
-    if latest_reading:
-        is_sim = latest_reading.get("simulated", True)
-        src = latest_reading.get("source", "UNKNOWN")
-
-        if is_sim:
-            # Simulated telemetry disclaimer
-            relevant_parameter_observations.append(
-                f"Virtual Telemetry Stream ({src}): HR {latest_reading.get('heart_rate_bpm')} bpm, "
-                f"SpO2 {latest_reading.get('spo2_percent')}%, BP {latest_reading.get('bp_systolic_mmhg')}/{latest_reading.get('bp_diastolic_mmhg')} mmHg. "
-                "(SIMULATED READING — Excluded from genuine clinical disease diagnosis per safety guardrails)."
-            )
-        else:
-            # Genuine sensor readings if available
-            hr = latest_reading.get("heart_rate_bpm")
-            spo2 = latest_reading.get("spo2_percent")
-            sys_bp = latest_reading.get("bp_systolic_mmhg")
-
-            if hr and hr > 100 and disease["id"] in ["coronary_artery_disease", "heart_failure", "anaemia", "thyroid_disorders"]:
-                relevant_parameter_observations.append(f"Recorded resting tachycardia ({hr} bpm).")
-                score += 1
-            if spo2 and spo2 < 92 and disease["id"] in ["copd", "respiratory_infections", "heart_failure"]:
-                relevant_parameter_observations.append(f"Recorded oxygen desaturation ({spo2}%).")
-                score += 3
-            if sys_bp and sys_bp >= 140 and disease["id"] in ["hypertension", "coronary_artery_disease", "stroke"]:
-                relevant_parameter_observations.append(f"Elevated systolic arterial pressure ({sys_bp} mmHg).")
-                score += 2
-
-    # 5. Identify Missing Information
-    if disease["id"] == "diabetes_mellitus":
-        if not any("glucose" in r.get("finding", "").lower() or "hba1c" in r.get("finding", "").lower() for r in relevant_report_findings):
-            missing_information.append("No official Fasting Plasma Glucose or laboratory HbA1c test recorded in medical vault.")
-        missing_information.append("No record of 2-Hour Oral Glucose Tolerance Test (OGTT).")
-        missing_information.append("Urine albumin-to-creatinine ratio (uACR) for nephropathy screening is absent.")
-
-    elif disease["id"] == "hypertension":
-        missing_information.append("24-Hour Ambulatory Blood Pressure Monitoring (ABPM) log not available.")
-
-    elif disease["id"] == "coronary_artery_disease":
-        if not any("troponin" in r.get("finding", "").lower() for r in relevant_report_findings):
-            missing_information.append("High-sensitivity cardiac troponin lab result is not on file.")
-        missing_information.append("Exercise treadmill stress test or Coronary CT Angiography not uploaded.")
-
-    elif disease["id"] == "chronic_kidney_disease":
-        if not any("creatinine" in r.get("finding", "").lower() for r in relevant_report_findings):
-            missing_information.append("Recent serum creatinine and eGFR filtration calculation not available.")
-
-    elif disease["id"] == "copd":
-        missing_information.append("Post-bronchodilator spirometry (FEV1/FVC ratio) is absent.")
-
-    elif disease["id"] == "anaemia":
-        missing_information.append("Complete Blood Count (CBC) and serum ferritin iron stores panel not uploaded.")
-
-    elif disease["id"] == "thyroid_disorders":
-        missing_information.append("Serum Thyroid Stimulating Hormone (TSH) and Free T4 assays are not on file.")
-
-    elif disease["id"] == "heart_failure":
-        missing_information.append("Serum BNP / NT-proBNP biomarker and Transthoracic Echocardiogram (LVEF) not available.")
-
-    # 6. Determine Match Level Category
-    if score >= 8:
-        match_level = "Relevant findings identified"
-        reason = f"Multiple correlating factors identified: {len(matching_symptoms)} matching symptom(s) and {len(relevant_report_findings)} relevant report finding(s)."
-    elif score >= 4:
-        match_level = "Some matching information"
-        reason = f"Partial clinical alignment identified through reported symptoms ({len(matching_symptoms)}) or patient profile risk characteristics."
-    elif score >= 1:
-        match_level = "Insufficient information"
-        reason = "Limited demographic or baseline risk overlap, but key confirmatory diagnostic laboratory tests and specific symptoms are currently absent."
+    # 4. Evaluate Health Parameters: ONLY the 4 AFib Parameters (ECG, Heart Rate, HRV, SpO2)
+    # Parameter 1: Heart Rhythm / ECG
+    if ecg_confirmation_documented:
+        relevant_parameter_observations.append("Heart Rhythm / ECG: Electrocardiogram documentation confirms Atrial Fibrillation rhythm.")
+    elif any("ecg" in r.get("finding", "").lower() or "sinus" in r.get("finding", "").lower() for r in relevant_report_findings):
+        relevant_parameter_observations.append("Heart Rhythm / ECG: Uploaded cardiac recording shows sinus rhythm without sustained AFib.")
     else:
-        match_level = "No meaningful match identified"
-        reason = "No reported symptoms, laboratory findings, or specific clinical risk indicators in the current record correspond to this condition."
+        relevant_parameter_observations.append("Heart Rhythm / ECG: No 12-lead ECG waveform uploaded on file.")
 
-    # Recommended next steps
-    recommended_next_assessments = disease.get("diagnostic_tests", [])[:3]
+    # Parameter 2: Heart Rate
+    if latest_reading and latest_reading.get("heart_rate_bpm"):
+        hr = latest_reading.get("heart_rate_bpm")
+        if hr > 100:
+            relevant_parameter_observations.append(f"Heart Rate: Resting tachycardia observed ({hr} BPM). Note: Heart rate alone cannot confirm AFib.")
+        else:
+            relevant_parameter_observations.append(f"Heart Rate: Recorded resting heart rate {hr} BPM.")
+
+    # Parameter 3: Heart Rate Variability (HRV)
+    # Strictly enforce: do not generate random or fabricated HRV values
+    relevant_parameter_observations.append("Heart Rate Variability (HRV): HRV data not available. A suitable validated ECG or PPG recording is required.")
+
+    # Parameter 4: Oxygen Saturation (SpO2)
+    if latest_reading and latest_reading.get("spo2_percent"):
+        spo2 = latest_reading.get("spo2_percent")
+        relevant_parameter_observations.append(f"Oxygen Saturation (SpO₂): {spo2}% (general oxygenation monitoring; cannot confirm AFib).")
+
+    # 5. Missing Information (Exclusively rhythm & monitoring modalities)
+    if not ecg_confirmation_documented:
+        missing_information.append("Standard 12-lead Electrocardiogram (ECG) during an active symptomatic episode is not on file.")
+        missing_information.append("Ambulatory Holter monitoring (24-48h) or prolonged patch monitoring is not uploaded.")
+
+    # 6. Emergency Warning Check
+    emergency_warning_triggered = has_chest_pain_or_fainting or (has_irregular_heartbeat_symptom and has_secondary_symptoms and len(matching_symptoms) >= 3)
+
+    # 7. Determine Transparent Match Level Result Label
+    if ecg_confirmation_documented:
+        match_level = "ECG confirmation documented in uploaded records"
+        reason = (
+            f"An uploaded medical report explicitly documents an Electrocardiogram finding of Atrial Fibrillation "
+            f"({ecg_confirmation_details['report_title']} on {ecg_confirmation_details['report_date']})."
+        )
+    elif has_irregular_heartbeat_symptom:
+        match_level = "Relevant findings identified"
+        reason = (
+            "The patient reports an irregular heartbeat rhythm (the primary clinical hallmark of cardiac arrhythmia), "
+            f"accompanied by {len(matching_symptoms)} associated symptom(s) and relevant cardiovascular profile history."
+        )
+    elif has_palpitations_or_rapid_hr and (has_secondary_symptoms or len(relevant_patient_details) > 0):
+        match_level = "Some relevant findings identified"
+        reason = (
+            "Symptoms of palpitations or rapid heartbeat are reported alongside cardiovascular risk factors or fatigue, "
+            "warranting clinical evaluation to determine rhythm etiology."
+        )
+    elif len(relevant_patient_details) > 0 or has_secondary_symptoms:
+        match_level = "Insufficient information"
+        reason = (
+            "Baseline cardiovascular risk factors or general symptoms (such as fatigue or dyspnea) are present, "
+            "but no irregular pulse rhythm is reported and no diagnostic ECG record is available."
+        )
+    else:
+        match_level = "No relevant findings identified"
+        reason = (
+            "No reported irregular heartbeat sensations, palpitations, or cardiac rhythm documentation in the current record."
+        )
+
+    # 8. Suggested Next Clinical Assessments
+    suggested_next_assessments = [
+        "12-Lead Electrocardiogram (ECG) to definitively capture electrical cardiac rhythm",
+        "Ambulatory ECG monitoring (Holter monitor or patch monitor) if episodes are intermittent / paroxysmal",
+        "Comprehensive clinical consultation with a physician or cardiologist"
+    ]
 
     return {
-        "disease_id": disease["id"],
-        "disease_name": disease["name"],
-        "category": disease["category"],
-        "short_description": disease["short_description"],
+        "disease_id": "atrial_fibrillation",
+        "disease_name": "Atrial Fibrillation",
+        "short_name": "AFib",
+        "category": "Cardiac arrhythmia",
+        "short_description": "An abnormal heart rhythm in which the atria beat irregularly and often rapidly.",
         "match_level": match_level,
-        "match_score_rank": score,
+        "ecg_confirmation_documented": ecg_confirmation_documented,
+        "ecg_confirmation_details": ecg_confirmation_details,
         "matching_symptoms": matching_symptoms,
+        "has_primary_irregular_rhythm_symptom": has_irregular_heartbeat_symptom,
         "relevant_patient_details": relevant_patient_details,
         "relevant_report_findings": relevant_report_findings,
         "relevant_parameter_observations": relevant_parameter_observations,
         "missing_information": missing_information,
         "reason_included": reason,
-        "recommended_next_assessments": recommended_next_assessments,
-        "medical_references": disease.get("medical_references", []),
-        "overview_route": disease.get("overview_route"),
-        "important_warning_signs": disease.get("important_warning_signs", [])
+        "suggested_next_assessments": suggested_next_assessments,
+        "emergency_warning_triggered": emergency_warning_triggered,
+        "emergency_warning_text": EMERGENCY_WARNING_TEXT if emergency_warning_triggered else None,
+        "overview_route": "/afib",
+        "medical_references": ATRIAL_FIBRILLATION_KNOWLEDGE_ITEM.get("medical_references", [])
     }
 
 def run_disease_analysis_for_patient(
@@ -281,40 +235,34 @@ def run_disease_analysis_for_patient(
     latest_reading: Optional[Dict[str, Any]]
 ) -> Dict[str, Any]:
     """
-    Executes full multi-condition comparison across all 10 major diseases in the clinical knowledge base.
-    Ranks results deterministically without fabricated percentages.
+    Executes single-disease Atrial Fibrillation clinical decision-support evaluation.
+    Returns exactly ONE disease evaluation result.
     """
-    results: List[Dict[str, Any]] = []
-
-    for disease in DISEASE_KNOWLEDGE_BASE:
-        evaluation = evaluate_patient_against_disease(
-            disease=disease,
-            patient_profile=patient_profile,
-            symptoms=symptoms,
-            reports=reports,
-            latest_reading=latest_reading
-        )
-        results.append(evaluation)
-
-    # Sort deterministically by match_score_rank descending
-    results.sort(key=lambda x: x["match_score_rank"], reverse=True)
+    afib_result = evaluate_patient_for_afib(
+        patient_profile=patient_profile,
+        symptoms=symptoms,
+        reports=reports,
+        latest_reading=latest_reading
+    )
 
     parameters_evaluated = {
         "heart_rate_bpm": latest_reading.get("heart_rate_bpm") if latest_reading else None,
         "spo2_percent": latest_reading.get("spo2_percent") if latest_reading else None,
         "bp_systolic_mmhg": latest_reading.get("bp_systolic_mmhg") if latest_reading else None,
         "bp_diastolic_mmhg": latest_reading.get("bp_diastolic_mmhg") if latest_reading else None,
-        "glucose_mg_dl": latest_reading.get("glucose_mg_dl") if latest_reading else None,
         "source": latest_reading.get("source") if latest_reading else "No live reading",
-        "simulated": latest_reading.get("simulated", True) if latest_reading else True
+        "simulated": latest_reading.get("simulated", True) if latest_reading else True,
+        "simulation_notice": "SIMULATED — NOT A CLINICAL MEASUREMENT. The Wokwi ESP32 testbed does not contain an ECG sensor and cannot detect electrical heart rhythm."
     }
 
     return {
         "patient_id": patient_id,
         "analysis_date": datetime.now(timezone.utc).isoformat(),
         "disclaimer": CLINICAL_DISCLAIMER,
+        "emergency_warning": EMERGENCY_WARNING_TEXT,
         "reports_considered_count": len(reports),
         "symptoms_considered_count": len(symptoms),
         "parameters_evaluated": parameters_evaluated,
-        "ranked_diseases": results
+        "afib_result": afib_result,
+        "ranked_diseases": [afib_result]  # Contains ONLY Atrial Fibrillation
     }

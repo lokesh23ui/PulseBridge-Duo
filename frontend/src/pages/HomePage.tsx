@@ -195,10 +195,10 @@ export const HomePage: React.FC = () => {
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
                 <Link
-                  to="/simulation"
+                  to="/monitor"
                   className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition"
                 >
-                  Simulation Studio
+                  Live Monitoring
                 </Link>
               </div>
             </div>
@@ -240,10 +240,10 @@ export const HomePage: React.FC = () => {
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
                 <Link
-                  to="/simulation"
+                  to="/monitor"
                   className="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold transition"
                 >
-                  Simulation Studio
+                  Live Monitoring
                 </Link>
               </div>
             </div>
@@ -322,15 +322,15 @@ export const HomePage: React.FC = () => {
             Ready to explore the PulseBridge Duo platform?
           </h2>
           <p className="text-teal-100 max-w-xl mx-auto text-sm sm:text-base leading-relaxed">
-            Test the live 3D models, launch the virtual simulation studio, compare dual wearable streams, 
-            and inspect real-time risk alerting.
+            Explore the live 3D models, inspect real-time physiological telemetry, 
+            evaluate AFib decision support, and manage family caregiver connections.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4 pt-2">
             <Link
-              to="/simulation"
+              to="/monitor"
               className="px-6 py-3.5 rounded-xl bg-white text-teal-900 hover:bg-slate-100 font-bold text-sm shadow-md transition cursor-pointer"
             >
-              Open Simulation Studio
+              Open Live Monitoring
             </Link>
             <Link
               to="/family"

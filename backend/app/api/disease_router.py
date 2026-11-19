@@ -14,11 +14,14 @@ from backend.app.models.entities import (
 )
 from backend.app.api.patients_router import verify_access_to_patient, resolve_patient_user_id
 from backend.app.services.disease_knowledge_base import (
-    get_all_diseases, get_disease_by_id, get_diabetes_overview_data,
-    DISEASE_KNOWLEDGE_BASE, GLOBAL_DIABETES_STATISTICS, DIABETES_PARAMETER_REFERENCES
+    get_all_diseases, get_disease_by_id, get_afib_overview_data, get_diabetes_overview_data,
+    DISEASE_KNOWLEDGE_BASE, GLOBAL_AFIB_STATISTICS, AFIB_PARAMETER_REFERENCES, AFIB_SYMPTOM_CATALOGUE,
+    ATRIAL_FIBRILLATION_KNOWLEDGE_ITEM
 )
 from backend.app.services.document_parser import extract_text_from_file, parse_report_text_to_findings
-from backend.app.services.disease_analyzer import run_disease_analysis_for_patient, CLINICAL_DISCLAIMER
+from backend.app.services.disease_analyzer import (
+    run_disease_analysis_for_patient, CLINICAL_DISCLAIMER, EMERGENCY_WARNING_TEXT
+)
 from backend.app.schemas.disease import (
     PatientSymptomCreate, PatientSymptomResponse,
     ReportExtractionDraft, ReportConfirmCreate,
@@ -32,34 +35,48 @@ router = APIRouter(prefix="/disease", tags=["Disease Intelligence & Clinical Ana
 # -------------------------------------------------------------
 @router.get("/knowledge-base", response_model=List[Dict[str, Any]])
 def get_knowledge_base():
-    """Returns the complete medical knowledge base containing all 10 major chronic diseases."""
+    """
+    Returns the single-disease clinical knowledge base containing only Atrial Fibrillation (AFib).
+    All prior chronic diseases have been decommissioned.
+    """
     return get_all_diseases()
 
 @router.get("/knowledge-base/{disease_id}")
 def get_disease_detail(disease_id: str):
-    """Returns comprehensive clinical reference information for a single disease."""
+    """Returns comprehensive clinical reference information for Atrial Fibrillation."""
     d = get_disease_by_id(disease_id)
     if not d:
-        raise HTTPException(status_code=404, detail="Disease not found in clinical knowledge base")
+        raise HTTPException(status_code=404, detail="Disease not found in clinical knowledge base. Only Atrial Fibrillation is supported.")
     return d
 
+@router.get("/afib-overview")
+def get_afib_overview():
+    """Returns complete Atrial Fibrillation overview: clinical background, global stats, parameter reference tables, and 11-symptom catalogue."""
+    return get_afib_overview_data()
+
 @router.get("/diabetes-overview")
-def get_diabetes_overview():
-    """Returns complete Diabetes Mellitus overview: clinical background, global stats, parameter reference tables."""
-    return get_diabetes_overview_data()
+def get_diabetes_overview_legacy():
+    """Legacy redirect/alias returning AFib overview data."""
+    return get_afib_overview_data()
+
+@router.get("/symptom-catalogue")
+def get_symptom_catalogue():
+    """Returns the 11 AFib symptom catalogue with 'Irregular heartbeat rhythm' as primary."""
+    return AFIB_SYMPTOM_CATALOGUE
 
 # -------------------------------------------------------------
-# 2. PATIENT-SPECIFIC DIABETES RELATION
+# 2. PATIENT-SPECIFIC ATRIAL FIBRILLATION RELATION
 # -------------------------------------------------------------
-@router.get("/patient/{patient_id}/diabetes-relation")
-def get_patient_diabetes_relation(
+@router.get("/patient/{patient_id}/afib-relation")
+def get_patient_afib_relation(
     patient_id: int,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
     """
-    Dynamically relates the selected patient's available clinical records to Diabetes Mellitus.
-    Respects caregiver permissions and highlights simulated Wokwi potentiometer readings.
+    Dynamically correlates the selected patient's available clinical records, symptoms,
+    and profile to Atrial Fibrillation (AFib). Respects caregiver permissions and
+    prominently cautions against treating simulated Wokwi potentiometer data as diagnostic evidence.
     """
     pid = verify_access_to_patient(current_user, patient_id, db, required_permission="view_live_readings")
     patient = db.query(User).filter(User.id == pid).first()
@@ -68,7 +85,7 @@ def get_patient_diabetes_relation(
 
     profile = patient.patient_profile
 
-    # Fetch patient's recorded symptoms
+    # Fetch patient's recorded active symptoms
     symptoms = db.query(PatientSymptom).filter(
         PatientSymptom.patient_id == pid,
         PatientSymptom.is_active == True
@@ -76,7 +93,6 @@ def get_patient_diabetes_relation(
 
     # Fetch patient's reports (if permission allows)
     reports = []
-    # If user is caregiver, check view_medical_reports permission
     can_view_reports = True
     if current_user.role == "caregiver":
         try:
@@ -94,74 +110,112 @@ def get_patient_diabetes_relation(
 
     latest_reading = readings[0] if readings else None
 
-    # Analyze relation to Diabetes Mellitus
+    # Demographic & Medical History Context
     age = profile.age if profile else None
     conditions = (profile.medical_conditions or "") if profile else ""
 
     relevant_patient_details = []
-    if age and age >= 45:
-        relevant_patient_details.append(f"Age {age} years meets the ADA recommendation for routine diabetes screening (>= 45 yrs).")
-    if "hypertension" in conditions.lower():
-        relevant_patient_details.append(f"Recorded cardiovascular comorbidity: '{conditions}'. Hypertension accelerates diabetic microvascular risk.")
+    if age:
+        if age >= 65:
+            relevant_patient_details.append(f"Age {age} years is an established non-modifiable risk factor for Atrial Fibrillation (prevalence exceeds 5% in this demographic).")
+        else:
+            relevant_patient_details.append(f"Age {age} years provides baseline cardiovascular context.")
 
-    # Symptoms relevant to diabetes
-    diabetes_keywords = ["thirst", "urination", "hunger", "fatigue", "vision", "weight", "numbness", "tingling", "healing"]
+    if "hypertension" in conditions.lower():
+        relevant_patient_details.append(f"Recorded cardiovascular condition: '{conditions}'. Hypertension is a major clinical risk factor for atrial remodeling and an essential component of the CHA2DS2-VASc stroke risk score.")
+    elif conditions:
+        relevant_patient_details.append(f"Recorded medical conditions: '{conditions}'.")
+
+    # Match against the 11 AFib Symptoms
     matching_symptoms = []
+    afib_keywords = [
+        "irregular", "arrhythmia", "palpitation", "flutter", "pounding", "rapid", "tachycardia",
+        "fatigue", "tired", "dizziness", "lightheaded", "shortness of breath", "dyspnea",
+        "chest discomfort", "chest tightness", "chest pain", "weakness", "exercise tolerance",
+        "faint", "syncope", "anxiety"
+    ]
     for s in symptoms:
-        if any(k in s.symptom_name.lower() for k in diabetes_keywords):
+        s_lower = s.symptom_name.lower()
+        if any(k in s_lower for k in afib_keywords):
+            is_primary = any(pk in s_lower for pk in ["irregular heartbeat", "irregular rhythm", "arrhythmia", "irregular pulse"])
             matching_symptoms.append({
                 "symptom_name": s.symptom_name,
                 "severity": s.severity,
                 "duration": s.duration,
-                "frequency": s.frequency
+                "frequency": s.frequency,
+                "notes": s.notes,
+                "is_primary": is_primary
             })
 
-    # Relevant report findings
+    # Relevant Report Findings (Cardiology, Holter, ECG, Labs)
     relevant_report_findings = []
-    lab_glucose_results = []
     for rep in reports:
         summary = rep.extracted_summary or {}
+        rep_title = rep.report_title or "Medical Report"
+        rep_date_str = rep.report_date.isoformat() if rep.report_date else None
+
         if isinstance(summary, dict):
+            raw_text = (summary.get("raw_text") or "").lower()
             findings = summary.get("findings", [])
             for f in findings:
                 t_name = str(f.get("test_name", "")).lower()
-                if any(k in t_name for k in ["glucose", "hba1c", "fbg", "sugar"]):
-                    item = {
-                        "report_title": rep.report_title,
-                        "report_date": rep.report_date.isoformat() if rep.report_date else None,
-                        "test_name": f.get("test_name"),
-                        "value": f.get("value"),
-                        "unit": f.get("unit"),
-                        "status": f.get("status", "Normal")
-                    }
-                    relevant_report_findings.append(item)
-                    lab_glucose_results.append(item)
+                obs = f.get("observation") or ""
+                relevant_report_findings.append({
+                    "report_title": rep_title,
+                    "report_date": rep_date_str,
+                    "test_name": f.get("test_name"),
+                    "value": f.get("value"),
+                    "unit": f.get("unit"),
+                    "status": f.get("status", "Normal"),
+                    "observation": obs
+                })
+            # Also capture cardiology-specific summary if present
+            if "ecg_status" in summary or "resting_hr_bpm" in summary:
+                relevant_report_findings.append({
+                    "report_title": rep_title,
+                    "report_date": rep_date_str,
+                    "test_name": "Holter / Telemetry Summary",
+                    "value": f"Resting HR: {summary.get('resting_hr_bpm', 'N/A')} bpm, Rhythm: {summary.get('ecg_status', 'Normal Sinus Rhythm')}",
+                    "unit": "",
+                    "status": "Review Baseline",
+                    "observation": rep.patient_notes or "Baseline telemetry evaluation."
+                })
+        elif rep.patient_notes:
+            relevant_report_findings.append({
+                "report_title": rep_title,
+                "report_date": rep_date_str,
+                "test_name": "Clinical Report Note",
+                "value": rep.patient_notes,
+                "unit": "",
+                "status": "Recorded",
+                "observation": "Clinical documentation on file."
+            })
 
-    # Missing clinical data
-    missing_clinical_data = []
-    if not lab_glucose_results:
-        missing_clinical_data.append("No laboratory Fasting Plasma Glucose or venous HbA1c test recorded in medical reports.")
-    missing_clinical_data.append("No official 2-Hour Oral Glucose Tolerance Test (OGTT 75g) on file.")
-    missing_clinical_data.append("Annual spot urine albumin-to-creatinine ratio (uACR) is absent.")
-
-    # Doctor review points
-    doctor_review_points = [
-        "Discuss whether an annual comprehensive metabolic panel (CMP) and HbA1c test are indicated.",
-        "Review blood pressure target adherence (< 130/80 mmHg is recommended in patients with elevated metabolic risk).",
-        "Assess peripheral sensation (10g monofilament test) and schedule annual dilated retinal exam."
+    # Missing Clinical Investigations
+    missing_clinical_data = [
+        "Official 12-lead Electrocardiogram (ECG) during an active symptomatic episode",
+        "Extended ambulatory monitoring (7-14 day Holter patch or event monitor)"
     ]
 
-    # Handle Simulated Readings vs Genuine Lab values
-    simulated_glucose_info = None
-    if latest_reading and latest_reading.glucose_mg_dl is not None:
-        simulated_glucose_info = {
-            "value": latest_reading.glucose_mg_dl,
-            "unit": "mg/dL",
-            "source": latest_reading.source,
-            "timestamp": latest_reading.timestamp.isoformat() if latest_reading.timestamp else None,
-            "warning_label": "SIMULATED READING — NOT A REAL BLOOD GLUCOSE MEASUREMENT.",
-            "clinical_caution": "The potentiometer or software simulator generates synthetic illustrative values for hardware testing. It must NEVER be used to diagnose diabetes or evaluate glycemic management."
+    # Doctor Review / Discussion Points
+    doctor_review_points = [
+        "Should extended 7-day ECG patch monitoring be scheduled to evaluate intermittent palpitations or irregular sensations?",
+        "What thresholds of heart rate elevation or irregularity should trigger immediate clinical re-evaluation?"
+    ]
+
+    # Sensor Telemetry & Guardrail
+    wokwi_simulation_info = {
+        "warning_label": "SIMULATED — NOT A CLINICAL MEASUREMENT.",
+        "clinical_caution": "The Wokwi simulator uses synthetic potentiometer data and cannot detect or diagnose cardiac arrhythmias or confirm Atrial Fibrillation. The ESP32 circuit does not include an ECG sensor.",
+        "latest_vitals": {
+            "heart_rate_bpm": latest_reading.heart_rate_bpm if latest_reading else None,
+            "spo2_percent": latest_reading.spo2_percent if latest_reading else None,
+            "hrv_ms": None,
+            "timestamp": latest_reading.timestamp.isoformat() if latest_reading and latest_reading.timestamp else None,
+            "is_simulated": latest_reading.simulated if latest_reading else True,
+            "source": latest_reading.source if latest_reading else "UNKNOWN"
         }
+    }
 
     return {
         "patient": {
@@ -172,25 +226,27 @@ def get_patient_diabetes_relation(
             "blood_type": profile.blood_type if profile else None,
             "medical_conditions": conditions
         },
-        "how_diabetes_relates": {
+        "how_afib_relates": {
             "relevant_patient_details": relevant_patient_details,
             "matching_symptoms": matching_symptoms,
+            "has_matching_symptoms": len(matching_symptoms) > 0,
             "relevant_report_findings": relevant_report_findings,
-            "has_lab_glucose_results": len(lab_glucose_results) > 0,
             "missing_clinical_data": missing_clinical_data,
             "doctor_review_points": doctor_review_points
         },
-        "lab_glucose_results": lab_glucose_results,
-        "simulated_glucose_telemetry": simulated_glucose_info,
-        "recent_vitals": {
-            "heart_rate_bpm": latest_reading.heart_rate_bpm if latest_reading else None,
-            "spo2_percent": latest_reading.spo2_percent if latest_reading else None,
-            "bp_systolic_mmhg": latest_reading.bp_systolic_mmhg if latest_reading else None,
-            "bp_diastolic_mmhg": latest_reading.bp_diastolic_mmhg if latest_reading else None,
-            "timestamp": latest_reading.timestamp.isoformat() if latest_reading and latest_reading.timestamp else None,
-            "is_simulated": latest_reading.simulated if latest_reading else True
-        }
+        "emergency_warning": EMERGENCY_WARNING_TEXT,
+        "wokwi_simulation_info": wokwi_simulation_info,
+        "symptoms_catalogue": AFIB_SYMPTOM_CATALOGUE
     }
+
+@router.get("/patient/{patient_id}/diabetes-relation")
+def get_patient_diabetes_relation_legacy(
+    patient_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """Legacy alias redirecting to AFib relation."""
+    return get_patient_afib_relation(patient_id, current_user, db)
 
 # -------------------------------------------------------------
 # 3. PATIENT SYMPTOM MANAGEMENT
@@ -290,7 +346,6 @@ def confirm_and_save_report(
     Saves a reviewed and confirmed medical report into the patient's secure diagnostic vault.
     """
     pid = resolve_patient_user_id(db, patient_id)
-    # Only patient or caregiver with active permission can commit
     if current_user.role == "patient" and current_user.id != pid:
         raise HTTPException(status_code=403, detail="You can only save reports to your own account")
     elif current_user.role == "caregiver":
@@ -320,7 +375,7 @@ def confirm_and_save_report(
     }
 
 # -------------------------------------------------------------
-# 5. PATIENT-BASED DISEASE ANALYSIS ENGINE
+# 5. PATIENT-BASED ATRIAL FIBRILLATION ANALYSIS ENGINE
 # -------------------------------------------------------------
 @router.post("/patient/{patient_id}/analyze", response_model=DiseaseAnalysisRunResponse)
 def run_disease_analysis(
@@ -329,8 +384,8 @@ def run_disease_analysis(
     db: Session = Depends(get_db)
 ):
     """
-    Executes intelligent patient-based disease analysis across all 10 chronic conditions.
-    Persists analysis record in history.
+    Executes clinical patient-based disease analysis strictly and exclusively for Atrial Fibrillation (AFib).
+    Produces transparent clinical reasoning with standard result labels and emergency warnings.
     """
     pid = verify_access_to_patient(current_user, patient_id, db, required_permission="view_live_readings")
     patient = db.query(User).filter(User.id == pid).first()
@@ -395,7 +450,7 @@ def run_disease_analysis(
             "simulated": latest.simulated
         }
 
-    # Run Analysis Engine
+    # Run Analysis Engine (Strictly for AFib)
     raw_analysis = run_disease_analysis_for_patient(
         patient_id=pid,
         patient_profile=profile_dict,
@@ -404,7 +459,7 @@ def run_disease_analysis(
         latest_reading=latest_dict
     )
 
-    # Highlight top diseases with match levels above 'No meaningful match'
+    # Highlighted summary (AFib entry)
     highlighted = [
         {
             "disease_id": d["disease_id"],
@@ -413,7 +468,11 @@ def run_disease_analysis(
             "reason": d["reason_included"]
         }
         for d in raw_analysis["ranked_diseases"]
-        if d["match_level"] in ["Relevant findings identified", "Some matching information"]
+        if d["match_level"] in [
+            "ECG confirmation documented in uploaded records",
+            "Relevant findings identified",
+            "Some relevant findings identified"
+        ]
     ]
 
     # Persist in DiseaseAnalysisRecord
@@ -425,7 +484,7 @@ def run_disease_analysis(
         symptoms_considered_count=raw_analysis["symptoms_considered_count"],
         highlighted_diseases=highlighted,
         full_results=raw_analysis["ranked_diseases"],
-        clinical_notes=f"Automated comparison across {len(DISEASE_KNOWLEDGE_BASE)} reference conditions."
+        clinical_notes="Automated clinical decision-support evaluation for Atrial Fibrillation (AFib)."
     )
     db.add(record)
     db.commit()

@@ -12,11 +12,10 @@ export const Header: React.FC = () => {
   const navLinks = [
     { name: 'Home', path: '/' },
     { name: 'Devices', path: '/devices' },
-    { name: 'Simulation Studio', path: '/simulation' },
     { name: 'Live Monitoring', path: '/monitor' },
     { name: 'Health Insights', path: '/insights' },
-    { name: 'Diabetes Overview', path: '/diabetes' },
-    { name: 'Disease Analysis', path: '/disease-analysis' },
+    { name: 'AFib Overview', path: '/afib' },
+    { name: 'AFib Analysis', path: '/disease-analysis' },
     { name: 'About', path: '/about' },
   ];
 

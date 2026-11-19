@@ -199,61 +199,18 @@ export const LiveMonitoringPage: React.FC = () => {
           icon={Droplets}
         />
 
-        {/* 3. Systolic Blood Pressure */}
+        {/* 3. Heart Rate Variability (HRV) */}
         <MetricCard
-          title="Systolic BP (Estimate)"
-          value={latestReading?.bp_systolic_mmhg ? Math.round(latestReading.bp_systolic_mmhg) : null}
-          unit="mmHg"
-          status={
-            (latestReading?.bp_systolic_mmhg ?? 120) > 160 ? 'WARNING' :
-            (latestReading?.bp_systolic_mmhg ?? 120) > 140 ? 'ATTENTION' : 'NORMAL'
-          }
-          statusLabel={
-            (latestReading?.bp_systolic_mmhg ?? 120) > 140 ? 'Elevated Systolic Estimate' : 'Within normal limits'
-          }
-          isEstimate={true}
-          sourceBadge={latestReading?.source ?? 'SIMULATED'}
-          history={bpSysHistory}
+          title="Heart Rate Variability (HRV)"
+          value={null}
+          unit="ms"
+          status="NORMAL"
+          statusLabel="HRV data not available. A suitable validated ECG or PPG recording is required."
+          sourceBadge="CLINICAL REFERENCE"
           icon={Activity}
         />
 
-        {/* 4. Diastolic Blood Pressure */}
-        <MetricCard
-          title="Diastolic BP (Estimate)"
-          value={latestReading?.bp_diastolic_mmhg ? Math.round(latestReading.bp_diastolic_mmhg) : null}
-          unit="mmHg"
-          status={
-            (latestReading?.bp_diastolic_mmhg ?? 80) > 100 ? 'WARNING' :
-            (latestReading?.bp_diastolic_mmhg ?? 80) > 90 ? 'ATTENTION' : 'NORMAL'
-          }
-          statusLabel={
-            (latestReading?.bp_diastolic_mmhg ?? 80) > 90 ? 'Elevated Diastolic Estimate' : 'Within normal limits'
-          }
-          isEstimate={true}
-          sourceBadge={latestReading?.source ?? 'SIMULATED'}
-          history={bpDiaHistory}
-          icon={Activity}
-        />
-
-        {/* 5. Blood Glucose */}
-        <MetricCard
-          title="Blood Glucose (Estimate)"
-          value={latestReading?.glucose_mg_dl ? Math.round(latestReading.glucose_mg_dl) : null}
-          unit="mg/dL"
-          status={
-            (latestReading?.glucose_mg_dl ?? 100) > 250 ? 'WARNING' :
-            (latestReading?.glucose_mg_dl ?? 100) > 180 ? 'ATTENTION' : 'NORMAL'
-          }
-          statusLabel={
-            (latestReading?.glucose_mg_dl ?? 100) > 180 ? 'Hyperglycemia Placeholder' : 'Within normal limits'
-          }
-          isEstimate={true}
-          sourceBadge={latestReading?.source ?? 'SIMULATED'}
-          history={glucoseHistory}
-          icon={Activity}
-        />
-
-        {/* 6. Temperature */}
+        {/* 4. Temperature */}
         <MetricCard
           title={latestReading?.temperature_source === 'ambient' ? 'Ambient Temperature (DHT22)' : 'Skin Temperature'}
           value={latestReading?.temperature_c ? latestReading.temperature_c : null}

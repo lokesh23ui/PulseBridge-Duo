@@ -27,10 +27,10 @@ const INITIAL_WELCOME: ChatMessage = {
 };
 
 const SUGGESTED_QUERIES = [
-  "How does disease analysis work?",
-  "What is the diabetes overview?",
+  "How does AFib analysis work?",
+  "What is the AFib overview?",
+  "What are the 11 AFib symptoms?",
   "How do invitation codes work?",
-  "How do I switch accounts?",
   "What are the 7 permissions?",
   "How to configure alert rules?"
 ];
@@ -38,19 +38,19 @@ const SUGGESTED_QUERIES = [
 // Knowledge base for structured product assistance
 const KNOWLEDGE_RESPONSES: { keywords: string[]; answer: string; links?: { label: string; path: string }[] }[] = [
   {
-    keywords: ["diabetes", "glucose", "hba1c", "fbg", "ogtt", "sugar"],
-    answer: "The Diabetes Overview page provides comprehensive clinical information on Diabetes Mellitus (Type 1, Type 2, and Gestational), verified global WHO/IDF statistics, a diagnostic parameter reference table (Fasting Glucose >= 126 mg/dL, HbA1c >= 6.5%), and dynamically analyzes how diabetes relates to your selected patient's records.",
+    keywords: ["afib", "atrial fibrillation", "arrhythmia", "palpitations", "flutter", "irregular heartbeat", "irregular pulse"],
+    answer: "The AFib Overview page provides comprehensive clinical information on Atrial Fibrillation (AFib), including its electrophysiological mechanisms, 4 clinical types (Paroxysmal, Persistent, Long-standing Persistent, Permanent), 11 recognized symptoms with 'Irregular heartbeat rhythm' as primary, verified global statistics (37.5-50M prevalence, 20-30% ischemic strokes), and dynamic integration with your patient's records.",
     links: [
-      { label: "Open Diabetes Overview", path: "/diabetes" },
-      { label: "Run Disease Analysis", path: "/disease-analysis" }
+      { label: "Open AFib Overview", path: "/afib" },
+      { label: "Run AFib Patient Analysis", path: "/disease-analysis" }
     ]
   },
   {
-    keywords: ["disease analysis", "analysis", "compare", "differential", "diagnose", "symptom comparison"],
-    answer: "Patient-Based Disease Analysis compares the patient's reported symptoms, uploaded lab reports, medical history, and vital signs against 10 verified chronic disease profiles (Diabetes, Hypertension, CAD, Stroke, CKD, COPD, Anaemia, Thyroid, Heart Failure, and Respiratory Infections). It provides transparent clinical reasoning, missing data flags, and discussion points for your doctor.",
+    keywords: ["disease analysis", "analysis", "compare", "evaluate", "diagnose", "symptom comparison", "afib analysis"],
+    answer: "Patient-Based AFib Analysis evaluates the patient's reported symptoms, uploaded ECG/Holter reports, cardiovascular history, and vital signs strictly and exclusively for Atrial Fibrillation (AFib). It provides transparent clinical reasoning, 5 standardized result labels (including 'ECG confirmation documented in uploaded records'), missing diagnostic flags, and urgent medical warning guidance.",
     links: [
-      { label: "Open Disease Analysis", path: "/disease-analysis" },
-      { label: "View Diabetes Overview", path: "/diabetes" }
+      { label: "Open AFib Analysis", path: "/disease-analysis" },
+      { label: "View AFib Overview", path: "/afib" }
     ]
   },
   {
@@ -105,14 +105,15 @@ const KNOWLEDGE_RESPONSES: { keywords: string[]; answer: string; links?: { label
     answer: "No physical wearable is required! The entire platform—including Patient profiles, Caregiver networks, invitation codes, permissions, medical reports, alert management, and notifications—is fully usable without connecting any hardware.",
     links: [
       { label: "Patient Care Dashboard", path: "/family" },
-      { label: "Simulation Studio", path: "/simulation" }
+      { label: "Live Monitoring", path: "/monitor" }
     ]
   },
   {
-    keywords: ["wokwi", "esp32", "sample reading", "injection"],
-    answer: "The Wokwi ESP32 emulation gateway accepts canonical JSON packets representing IoT microcontroller telemetry. You can generate fresh sample readings in the Simulation Studio with custom physiological scenarios (Stable, High HR, Low SpO2, Elevated BP).",
+    keywords: ["telemetry", "vitals", "reading", "sensor"],
+    answer: "Continuous telemetry captures Heart Rate, Oxygen Saturation (SpO₂), and physiological observations. Live feeds update automatically and can be monitored in real time.",
     links: [
-      { label: "Simulation Studio Wokwi Mode", path: "/simulation" }
+      { label: "Live Monitoring", path: "/monitor" },
+      { label: "AFib Overview", path: "/afib" }
     ]
   }
 ];

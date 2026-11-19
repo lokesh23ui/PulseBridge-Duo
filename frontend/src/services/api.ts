@@ -455,21 +455,35 @@ export const api = {
     return await res.json();
   },
 
-  async getDiabetesOverview() {
-    const res = await fetch(`${API_BASE}/disease/diabetes-overview`);
-    if (!res.ok) throw new Error('Failed to fetch diabetes overview');
+  async getAFibOverview() {
+    const res = await fetch(`${API_BASE}/disease/afib-overview`);
+    if (!res.ok) throw new Error('Failed to fetch AFib overview');
     return await res.json();
   },
 
-  async getPatientDiabetesRelation(token: string, patientId: number) {
-    const res = await fetch(`${API_BASE}/disease/patient/${patientId}/diabetes-relation`, {
+  async getPatientAFibRelation(token: string, patientId: number) {
+    const res = await fetch(`${API_BASE}/disease/patient/${patientId}/afib-relation`, {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (!res.ok) {
-      const err = await res.json().catch(() => ({ detail: 'Failed to fetch patient diabetes relation' }));
-      throw new Error(err.detail || 'Failed to fetch patient diabetes relation');
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch patient AFib relation' }));
+      throw new Error(err.detail || 'Failed to fetch patient AFib relation');
     }
     return await res.json();
+  },
+
+  async getAFibSymptomCatalogue() {
+    const res = await fetch(`${API_BASE}/disease/symptom-catalogue`);
+    if (!res.ok) throw new Error('Failed to fetch AFib symptom catalogue');
+    return await res.json();
+  },
+
+  async getDiabetesOverview() {
+    return this.getAFibOverview();
+  },
+
+  async getPatientDiabetesRelation(token: string, patientId: number) {
+    return this.getPatientAFibRelation(token, patientId);
   },
 
   async getPatientSymptoms(token: string, patientId: number) {
