@@ -1,0 +1,14 @@
+{
+  "device_id": "PB-ESP32-01",
+  "source": "WOKWI_SIMULATION",
+  "simulated": true,
+  "heart_rate_bpm": 104,
+  "spo2_percent": 86,
+  "bp_systolic_mmhg": 131,
+  "bp_diastolic_mmhg": 89,
+  "glucose_mg_dl": 182,
+  "temperature_c": 36.8,
+  "humidity_percent": 45.0,
+  "activity_percent": 45,
+  "demo_status": "REVIEW"
+}

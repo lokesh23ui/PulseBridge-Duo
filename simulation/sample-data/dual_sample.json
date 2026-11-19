@@ -1,0 +1,29 @@
+{
+  "session_id": "dual-sim-001",
+  "timestamp": "2026-11-16T14:00:00Z",
+  "configuration": "both",
+  "ring": {
+    "device_id": "PB-RING-01",
+    "heart_rate_bpm": 74.0,
+    "spo2_percent": 98.4,
+    "skin_temp_c": 36.6,
+    "signal_quality": 0.96,
+    "battery_percent": 90,
+    "connection_state": "connected"
+  },
+  "watch": {
+    "device_id": "PB-WATCH-01",
+    "heart_rate_bpm": 77.0,
+    "spo2_percent": 98.1,
+    "skin_temp_c": 36.4,
+    "signal_quality": 0.93,
+    "battery_percent": 77,
+    "connection_state": "connected"
+  },
+  "correlation": {
+    "heart_rate_diff_bpm": 3.0,
+    "reading_compatibility": "HIGH_CONFIDENCE",
+    "dual_signal_valid": true,
+    "notes": "Compatible dual readings. Variance within physiological baseline."
+  }
+}

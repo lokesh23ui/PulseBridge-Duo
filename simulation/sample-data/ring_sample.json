@@ -1,0 +1,15 @@
+{
+  "device_id": "PB-RING-01",
+  "device_type": "ring",
+  "source": "RING_SIMULATOR",
+  "simulated": true,
+  "heart_rate_bpm": 74.5,
+  "spo2_percent": 98.2,
+  "temperature_c": 36.6,
+  "temperature_source": "skin",
+  "activity_percent": 18,
+  "signal_quality": 0.96,
+  "battery_percent": 91,
+  "connection_state": "connected",
+  "demo_status": "NORMAL"
+}

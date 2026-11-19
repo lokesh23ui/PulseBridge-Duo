@@ -1,0 +1,18 @@
+{
+  "device_id": "PB-WATCH-01",
+  "device_type": "watch",
+  "source": "WATCH_SIMULATOR",
+  "simulated": true,
+  "heart_rate_bpm": 76.0,
+  "spo2_percent": 97.9,
+  "bp_systolic_mmhg": 122,
+  "bp_diastolic_mmhg": 80,
+  "glucose_mg_dl": 105,
+  "temperature_c": 36.4,
+  "temperature_source": "skin",
+  "activity_percent": 22,
+  "signal_quality": 0.94,
+  "battery_percent": 78,
+  "connection_state": "connected",
+  "demo_status": "NORMAL"
+}
