@@ -148,6 +148,38 @@ class MedicalReport(Base):
     file_path = Column(String(512), nullable=True)
     created_at = Column(DateTime, default=utc_now)
 
+# -------------------------------------------------------------
+# PATIENT SYMPTOMS & DISEASE ANALYSIS MODELS
+# -------------------------------------------------------------
+class PatientSymptom(Base):
+    __tablename__ = "patient_symptoms"
+
+    id = Column(Integer, primary_key=True, index=True)
+    patient_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    recorded_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    symptom_name = Column(String(128), nullable=False)
+    duration = Column(String(64), nullable=True)  # e.g., "3 days", "2 weeks", "1 month"
+    severity = Column(String(32), default="Moderate")  # Mild, Moderate, Severe
+    frequency = Column(String(32), default="Intermittent")  # Occasional, Intermittent, Constant
+    notes = Column(Text, nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=utc_now)
+
+class DiseaseAnalysisRecord(Base):
+    __tablename__ = "disease_analysis_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    analysis_id = Column(String(64), unique=True, index=True, default=lambda: f"analysis-{uuid.uuid4().hex[:10]}")
+    patient_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    performed_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    analysis_date = Column(DateTime, default=utc_now, index=True)
+    reports_considered_count = Column(Integer, default=0)
+    symptoms_considered_count = Column(Integer, default=0)
+    highlighted_diseases = Column(JSON, nullable=True)  # list of top matched disease summaries
+    full_results = Column(JSON, nullable=False)  # detailed results for all analyzed conditions
+    clinical_notes = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=utc_now)
+
 class AuditLog(Base):
     __tablename__ = "audit_logs"
 

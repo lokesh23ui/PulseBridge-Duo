@@ -440,5 +440,129 @@ export const api = {
 
   async injectPatientControlledReading(token: string, patientId: number, reading: Record<string, any>) {
     return this.injectControlledPatientReading(token, patientId, reading);
+  },
+
+  // --- Disease Intelligence & Clinical Analysis ---
+  async getDiseaseKnowledgeBase() {
+    const res = await fetch(`${API_BASE}/disease/knowledge-base`);
+    if (!res.ok) throw new Error('Failed to fetch disease knowledge base');
+    return await res.json();
+  },
+
+  async getDiseaseDetail(diseaseId: string) {
+    const res = await fetch(`${API_BASE}/disease/knowledge-base/${diseaseId}`);
+    if (!res.ok) throw new Error('Failed to fetch disease detail');
+    return await res.json();
+  },
+
+  async getDiabetesOverview() {
+    const res = await fetch(`${API_BASE}/disease/diabetes-overview`);
+    if (!res.ok) throw new Error('Failed to fetch diabetes overview');
+    return await res.json();
+  },
+
+  async getPatientDiabetesRelation(token: string, patientId: number) {
+    const res = await fetch(`${API_BASE}/disease/patient/${patientId}/diabetes-relation`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to fetch patient diabetes relation' }));
+      throw new Error(err.detail || 'Failed to fetch patient diabetes relation');
+    }
+    return await res.json();
+  },
+
+  async getPatientSymptoms(token: string, patientId: number) {
+    const res = await fetch(`${API_BASE}/disease/patient/${patientId}/symptoms`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to fetch patient symptoms');
+    return await res.json();
+  },
+
+  async recordPatientSymptom(token: string, patientId: number, payload: Record<string, any>) {
+    const res = await fetch(`${API_BASE}/disease/patient/${patientId}/symptoms`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to record symptom' }));
+      throw new Error(err.detail || 'Failed to record symptom');
+    }
+    return await res.json();
+  },
+
+  async deletePatientSymptom(token: string, patientId: number, symptomId: number) {
+    const res = await fetch(`${API_BASE}/disease/patient/${patientId}/symptoms/${symptomId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to delete symptom');
+    return await res.json();
+  },
+
+  async extractReportDraft(token: string, patientId: number, formData: FormData) {
+    const res = await fetch(`${API_BASE}/disease/patient/${patientId}/reports/extract`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`
+      },
+      body: formData
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to extract report draft' }));
+      throw new Error(err.detail || 'Failed to extract report draft');
+    }
+    return await res.json();
+  },
+
+  async confirmAndSaveReport(token: string, patientId: number, payload: Record<string, any>) {
+    const res = await fetch(`${API_BASE}/disease/patient/${patientId}/reports/confirm`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to save confirmed report' }));
+      throw new Error(err.detail || 'Failed to save confirmed report');
+    }
+    return await res.json();
+  },
+
+  async runDiseaseAnalysis(token: string, patientId: number) {
+    const res = await fetch(`${API_BASE}/disease/patient/${patientId}/analyze`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to run disease analysis' }));
+      throw new Error(err.detail || 'Failed to run disease analysis');
+    }
+    return await res.json();
+  },
+
+  async getPatientAnalysisHistory(token: string, patientId: number) {
+    const res = await fetch(`${API_BASE}/disease/patient/${patientId}/analyses`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to fetch analysis history');
+    return await res.json();
+  },
+
+  async getSingleAnalysisRecord(token: string, patientId: number, analysisId: string) {
+    const res = await fetch(`${API_BASE}/disease/patient/${patientId}/analyses/${analysisId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to fetch analysis detail');
+    return await res.json();
   }
 };

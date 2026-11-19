@@ -7,7 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.app.database.connection import engine, Base, SessionLocal
 from backend.app.models.entities import (
     Device, SystemConfig, User, PatientProfile, CaregiverProfile, 
-    PatientCaregiverRelationship, AccessPermission, MedicalReport, AlertRule, utc_now
+    PatientCaregiverRelationship, AccessPermission, MedicalReport, AlertRule,
+    PatientSymptom, DiseaseAnalysisRecord, utc_now
 )
 from backend.app.core.auth import hash_password
 from backend.app.core.thresholds import DEFAULT_THRESHOLDS
@@ -20,6 +21,7 @@ from backend.app.api.family_router import router as family_router
 from backend.app.api.patients_router import router as patients_router
 from backend.app.api.alerts_router import router as alerts_router
 from backend.app.api.notifications_router import router as notifications_router
+from backend.app.api.disease_router import router as disease_router
 
 def seed_demo_accounts_and_data(db):
     """Seeds Demo Patient and Demo Caregiver for immediate interactive hackathon judging."""
@@ -131,6 +133,88 @@ def seed_demo_accounts_and_data(db):
         ))
         db.commit()
 
+    # 6. Seed Baseline Clinical Symptoms for Eleanor Vance
+    if db.query(PatientSymptom).filter(PatientSymptom.patient_id == demo_patient.id).count() == 0:
+        db.add_all([
+            PatientSymptom(
+                patient_id=demo_patient.id,
+                recorded_by_user_id=demo_patient.id,
+                symptom_name="Frequent urination (polyuria)",
+                duration="2 weeks",
+                severity="Mild",
+                frequency="Intermittent",
+                notes="Noticeable during evening and night hours."
+            ),
+            PatientSymptom(
+                patient_id=demo_patient.id,
+                recorded_by_user_id=demo_patient.id,
+                symptom_name="Excessive thirst (polydipsia)",
+                duration="10 days",
+                severity="Mild",
+                frequency="Occasional",
+                notes="Dry mouth upon waking, increased water consumption."
+            ),
+            PatientSymptom(
+                patient_id=demo_patient.id,
+                recorded_by_user_id=demo_patient.id,
+                symptom_name="Exertional fatigue",
+                duration="1 month",
+                severity="Moderate",
+                frequency="Constant",
+                notes="Tires easily after climbing stairs or brisk walks."
+            )
+        ])
+        db.commit()
+
+    # 7. Seed Comprehensive Metabolic Report
+    if db.query(MedicalReport).filter(MedicalReport.patient_id == demo_patient.id, MedicalReport.category == "Endocrinology & Metabolic").count() == 0:
+        db.add(MedicalReport(
+            patient_id=demo_patient.id,
+            report_title="Annual Comprehensive Metabolic & Lipid Panel",
+            category="Endocrinology & Metabolic",
+            report_date=utc_now() - datetime.timedelta(days=14),
+            healthcare_provider="Quest Diagnostics Metro Regional Lab",
+            patient_notes="Routine annual evaluation. Fasting glucose slightly elevated above baseline.",
+            extracted_summary={
+                "raw_text": "Metabolic panel indicates Fasting Blood Glucose of 118 mg/dL (Impaired Fasting Glucose / Prediabetes tier). HbA1c is 5.9%. Serum Creatinine 0.9 mg/dL. eGFR 78 mL/min/1.73m2. Total Cholesterol 210 mg/dL.",
+                "findings": [
+                    {
+                        "test_name": "Fasting Blood Glucose",
+                        "value": 118.0,
+                        "unit": "mg/dL",
+                        "reference_range": "70 - 99 mg/dL",
+                        "status": "Impaired (Prediabetes)",
+                        "observation": "Fasting plasma glucose in impaired fasting glucose tier (100 - 125 mg/dL)."
+                    },
+                    {
+                        "test_name": "Glycated Hemoglobin (HbA1c)",
+                        "value": 5.9,
+                        "unit": "%",
+                        "reference_range": "< 5.7%",
+                        "status": "Prediabetes",
+                        "observation": "HbA1c indicates borderline prediabetic range (5.7% - 6.4%)."
+                    },
+                    {
+                        "test_name": "Serum Creatinine",
+                        "value": 0.9,
+                        "unit": "mg/dL",
+                        "reference_range": "0.7 - 1.2 mg/dL",
+                        "status": "Normal",
+                        "observation": "Normal renal excretion."
+                    },
+                    {
+                        "test_name": "Total Cholesterol",
+                        "value": 210.0,
+                        "unit": "mg/dL",
+                        "reference_range": "< 200 mg/dL",
+                        "status": "Borderline",
+                        "observation": "Borderline elevation in circulating lipids."
+                    }
+                ]
+            }
+        ))
+        db.commit()
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize SQLite database schema
@@ -193,6 +277,7 @@ app.include_router(family_router, prefix="/api")
 app.include_router(patients_router, prefix="/api")
 app.include_router(alerts_router, prefix="/api")
 app.include_router(notifications_router, prefix="/api")
+app.include_router(disease_router, prefix="/api")
 app.include_router(api_router, prefix="/api")
 
 # WebSocket Endpoint

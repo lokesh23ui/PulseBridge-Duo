@@ -15,6 +15,8 @@ export const Header: React.FC = () => {
     { name: 'Simulation Studio', path: '/simulation' },
     { name: 'Live Monitoring', path: '/monitor' },
     { name: 'Health Insights', path: '/insights' },
+    { name: 'Diabetes Overview', path: '/diabetes' },
+    { name: 'Disease Analysis', path: '/disease-analysis' },
     { name: 'About', path: '/about' },
   ];
 

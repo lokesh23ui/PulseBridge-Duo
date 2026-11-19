@@ -22,6 +22,10 @@ import { FamilyCarePage } from './pages/FamilyCarePage';
 import { PatientMonitoringPage } from './pages/PatientMonitoringPage';
 import { MedicalReportsPage } from './pages/MedicalReportsPage';
 
+// Disease Intelligence Pages
+import { DiabetesOverviewPage } from './pages/DiabetesOverviewPage';
+import { DiseaseAnalysisPage } from './pages/DiseaseAnalysisPage';
+
 export const App: React.FC = () => {
   return (
     <AuthProvider>
@@ -38,6 +42,8 @@ export const App: React.FC = () => {
                 <Route path="/simulation" element={<SimulationStudioPage />} />
                 <Route path="/monitor" element={<LiveMonitoringPage />} />
                 <Route path="/insights" element={<HealthInsightsPage />} />
+                <Route path="/diabetes" element={<DiabetesOverviewPage />} />
+                <Route path="/disease-analysis" element={<DiseaseAnalysisPage />} />
                 <Route path="/technology" element={<AboutPage />} />
                 <Route path="/about" element={<AboutPage />} />
 

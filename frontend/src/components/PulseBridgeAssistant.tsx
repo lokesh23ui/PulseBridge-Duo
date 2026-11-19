@@ -27,16 +27,32 @@ const INITIAL_WELCOME: ChatMessage = {
 };
 
 const SUGGESTED_QUERIES = [
+  "How does disease analysis work?",
+  "What is the diabetes overview?",
   "How do invitation codes work?",
   "How do I switch accounts?",
-  "How does device preview work?",
   "What are the 7 permissions?",
-  "How to configure alert rules?",
-  "Is a physical wearable required?"
+  "How to configure alert rules?"
 ];
 
 // Knowledge base for structured product assistance
 const KNOWLEDGE_RESPONSES: { keywords: string[]; answer: string; links?: { label: string; path: string }[] }[] = [
+  {
+    keywords: ["diabetes", "glucose", "hba1c", "fbg", "ogtt", "sugar"],
+    answer: "The Diabetes Overview page provides comprehensive clinical information on Diabetes Mellitus (Type 1, Type 2, and Gestational), verified global WHO/IDF statistics, a diagnostic parameter reference table (Fasting Glucose >= 126 mg/dL, HbA1c >= 6.5%), and dynamically analyzes how diabetes relates to your selected patient's records.",
+    links: [
+      { label: "Open Diabetes Overview", path: "/diabetes" },
+      { label: "Run Disease Analysis", path: "/disease-analysis" }
+    ]
+  },
+  {
+    keywords: ["disease analysis", "analysis", "compare", "differential", "diagnose", "symptom comparison"],
+    answer: "Patient-Based Disease Analysis compares the patient's reported symptoms, uploaded lab reports, medical history, and vital signs against 10 verified chronic disease profiles (Diabetes, Hypertension, CAD, Stroke, CKD, COPD, Anaemia, Thyroid, Heart Failure, and Respiratory Infections). It provides transparent clinical reasoning, missing data flags, and discussion points for your doctor.",
+    links: [
+      { label: "Open Disease Analysis", path: "/disease-analysis" },
+      { label: "View Diabetes Overview", path: "/diabetes" }
+    ]
+  },
   {
     keywords: ["invitation", "code", "connect", "invite", "add patient", "pbd-"],
     answer: "Every Patient account generates a secure single-use invitation code (e.g. PBD-KU7W-M1P4) with 48-hour expiration. A Caregiver can redeem this code in the Family Care Hub to request access. The Patient then reviews the request and configures granular permissions before access is granted.",
