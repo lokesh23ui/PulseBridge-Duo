@@ -89,7 +89,7 @@ export const HealthAlertPanel: React.FC<HealthAlertPanelProps> = ({
               type="button"
               onClick={onClearAll}
               className="p-1.5 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-              title="Clear Demonstration Alerts"
+              title="Clear Active Alerts"
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -104,7 +104,7 @@ export const HealthAlertPanel: React.FC<HealthAlertPanelProps> = ({
             <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-emerald-500 opacity-80" />
             <p className="font-medium text-sm text-slate-600">No active alerts triggered</p>
             <p className="text-xs text-slate-400 mt-1">
-              All monitored physiological parameters are within prototype thresholds.
+              All monitored physiological parameters are within configured thresholds.
             </p>
           </div>
         ) : (
@@ -133,7 +133,7 @@ export const HealthAlertPanel: React.FC<HealthAlertPanelProps> = ({
                   </p>
 
                   <div className="p-2.5 mt-2 rounded-xl bg-slate-100/80 border border-slate-200/60 text-xs text-slate-600 leading-relaxed">
-                    <strong className="text-slate-800">Clinical Verification:</strong> {alert.verification_instruction}
+                    <strong className="text-slate-800">Verification Advisory:</strong> {alert.verification_instruction}
                   </div>
                 </div>
 
@@ -163,10 +163,10 @@ export const HealthAlertPanel: React.FC<HealthAlertPanelProps> = ({
         )}
       </div>
 
-      {/* Demonstration Banner */}
+      {/* Advisory Banner */}
       <div className="px-6 py-2.5 bg-slate-50 border-t border-slate-200 text-[11px] font-mono text-slate-500 flex items-center justify-between">
         <span>Rule-based threshold evaluation</span>
-        <span className="text-amber-600 font-medium">Demonstration logic · Not clinical diagnosis</span>
+        <span className="text-teal-700 font-medium">Continuous monitoring · Non-clinical evaluation</span>
       </div>
     </div>
   );

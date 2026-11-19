@@ -29,6 +29,11 @@ export const WatchCanvas3D: React.FC<WatchCanvas3DProps> = ({
   const componentMeshesRef = useRef<Map<string, THREE.Object3D>>(new Map());
   const raycasterRef = useRef<THREE.Raycaster>(new THREE.Raycaster());
   const mouseRef = useRef<THREE.Vector2>(new THREE.Vector2());
+  const autoRotateRef = useRef<boolean>(autoRotate);
+
+  useEffect(() => {
+    autoRotateRef.current = autoRotate;
+  }, [autoRotate]);
 
   // Function to create a live procedural watch face canvas texture
   const createWatchFaceTexture = (): THREE.CanvasTexture => {
@@ -355,8 +360,16 @@ export const WatchCanvas3D: React.FC<WatchCanvas3DProps> = ({
     rootGroup.add(strapGroup);
     componentMeshesRef.current.set('strap', strapGroup);
 
-    // 7. Click raycasting for selection
+    // 7. Click raycasting for selection (distinguish clicks from drag/orbit gestures)
+    let pointerDownPos = { x: 0, y: 0 };
     const handlePointerDown = (event: MouseEvent) => {
+      pointerDownPos = { x: event.clientX, y: event.clientY };
+    };
+
+    const handlePointerUp = (event: MouseEvent) => {
+      const dist = Math.hypot(event.clientX - pointerDownPos.x, event.clientY - pointerDownPos.y);
+      if (dist > 5) return; // Pointer moved significantly: user was rotating/orbiting, do not select
+
       const rect = container.getBoundingClientRect();
       mouseRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       mouseRef.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -380,13 +393,14 @@ export const WatchCanvas3D: React.FC<WatchCanvas3DProps> = ({
     };
 
     container.addEventListener('pointerdown', handlePointerDown);
+    container.addEventListener('pointerup', handlePointerUp);
 
     // 8. Animation Loop
     let animationFrameId: number;
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
 
-      if (autoRotate && rootGroup) {
+      if (autoRotateRef.current && rootGroup) {
         rootGroup.rotation.y += 0.006;
       }
 
@@ -395,10 +409,10 @@ export const WatchCanvas3D: React.FC<WatchCanvas3DProps> = ({
     };
     animate();
 
-    // 9. Resize Listener
+    // 9. Resize Listener & ResizeObserver
     const handleResize = () => {
       if (!container) return;
-      const w = container.clientWidth;
+      const w = container.clientWidth || 600;
       const h = container.clientHeight || 480;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
@@ -406,14 +420,36 @@ export const WatchCanvas3D: React.FC<WatchCanvas3DProps> = ({
     };
     window.addEventListener('resize', handleResize);
 
+    const resizeObserver = new ResizeObserver(() => {
+      handleResize();
+    });
+    resizeObserver.observe(container);
+
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
       container.removeEventListener('pointerdown', handlePointerDown);
+      container.removeEventListener('pointerup', handlePointerUp);
       renderer.dispose();
       container.innerHTML = '';
     };
   }, []);
+
+  // Update internal shell transparency dynamically
+  useEffect(() => {
+    const chassisObj = componentMeshesRef.current.get('chassis-enclosure');
+    if (chassisObj) {
+      chassisObj.traverse(child => {
+        if (child instanceof THREE.Mesh && child.material) {
+          const mat = child.material as THREE.MeshStandardMaterial;
+          mat.opacity = internalView ? 0.35 : 1.0;
+          mat.transparent = internalView;
+          mat.needsUpdate = true;
+        }
+      });
+    }
+  }, [internalView]);
 
   // Update exploded view positions smoothly based on explodedProgress
   useEffect(() => {

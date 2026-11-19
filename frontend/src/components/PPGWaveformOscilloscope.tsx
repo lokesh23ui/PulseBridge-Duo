@@ -148,10 +148,10 @@ export const PPGWaveformOscilloscope: React.FC<PPGWaveformOscilloscopeProps> = (
         />
       </div>
 
-      {/* Bottom Mandatory Demonstration Guardrail */}
+      {/* Bottom Telemetry Simulation Guardrail */}
       <div className="px-4 py-1.5 bg-slate-950 border-t border-slate-900 text-[10px] font-mono text-slate-400 flex items-center justify-between">
-        <span>Software Demonstration: Synthesized morphology with systolic peak & dicrotic notch</span>
-        <span className="text-amber-400/90 font-medium">NOT REAL CLINICAL ACQUISITION</span>
+        <span>Waveform Simulation: Synthesized morphology with systolic peak & dicrotic notch</span>
+        <span className="text-teal-400/90 font-medium">ILLUSTRATIVE PHYSIOLOGICAL SYNTHESIS</span>
       </div>
     </div>
   );

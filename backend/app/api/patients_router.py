@@ -34,6 +34,8 @@ def verify_access_to_patient(current_user: User, patient_id: int, db: Session, r
     If current_user is a caregiver, verifies an active relationship and the required permission.
     Returns the resolved patient User.id.
     """
+    if (patient_id == 0 or patient_id == current_user.id) and current_user.role == "patient":
+        return current_user.id
     real_patient_id = resolve_patient_user_id(db, patient_id)
     if current_user.id == real_patient_id and current_user.role == "patient":
         return real_patient_id

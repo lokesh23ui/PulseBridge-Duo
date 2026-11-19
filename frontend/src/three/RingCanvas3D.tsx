@@ -29,6 +29,11 @@ export const RingCanvas3D: React.FC<RingCanvas3DProps> = ({
   const componentMeshesRef = useRef<Map<string, THREE.Object3D>>(new Map());
   const raycasterRef = useRef<THREE.Raycaster>(new THREE.Raycaster());
   const mouseRef = useRef<THREE.Vector2>(new THREE.Vector2());
+  const autoRotateRef = useRef<boolean>(autoRotate);
+
+  useEffect(() => {
+    autoRotateRef.current = autoRotate;
+  }, [autoRotate]);
 
   useEffect(() => {
     const container = mountRef.current;
@@ -272,7 +277,16 @@ export const RingCanvas3D: React.FC<RingCanvas3DProps> = ({
     componentMeshesRef.current.set('charging-contacts', chargeGroup);
 
     // 7. Mouse click raycasting for component selection
+    // 7. Click raycasting for selection (distinguish clicks from drag/orbit gestures)
+    let pointerDownPos = { x: 0, y: 0 };
     const handlePointerDown = (event: MouseEvent) => {
+      pointerDownPos = { x: event.clientX, y: event.clientY };
+    };
+
+    const handlePointerUp = (event: MouseEvent) => {
+      const dist = Math.hypot(event.clientX - pointerDownPos.x, event.clientY - pointerDownPos.y);
+      if (dist > 5) return; // Pointer moved: orbit/drag, not a click
+
       const rect = container.getBoundingClientRect();
       mouseRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       mouseRef.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
@@ -296,13 +310,14 @@ export const RingCanvas3D: React.FC<RingCanvas3DProps> = ({
     };
 
     container.addEventListener('pointerdown', handlePointerDown);
+    container.addEventListener('pointerup', handlePointerUp);
 
     // 8. Animation Loop
     let animationFrameId: number;
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
 
-      if (autoRotate && rootGroup) {
+      if (autoRotateRef.current && rootGroup) {
         rootGroup.rotation.y += 0.008;
       }
 
@@ -314,7 +329,7 @@ export const RingCanvas3D: React.FC<RingCanvas3DProps> = ({
     // 9. Resize Observer
     const handleResize = () => {
       if (!container) return;
-      const w = container.clientWidth;
+      const w = container.clientWidth || 600;
       const h = container.clientHeight || 480;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
@@ -322,14 +337,36 @@ export const RingCanvas3D: React.FC<RingCanvas3DProps> = ({
     };
     window.addEventListener('resize', handleResize);
 
+    const resizeObserver = new ResizeObserver(() => {
+      handleResize();
+    });
+    resizeObserver.observe(container);
+
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
+      resizeObserver.disconnect();
       container.removeEventListener('pointerdown', handlePointerDown);
+      container.removeEventListener('pointerup', handlePointerUp);
       renderer.dispose();
       container.innerHTML = '';
     };
   }, []);
+
+  // Update shell opacity dynamically on internalView changes
+  useEffect(() => {
+    const outerShell = componentMeshesRef.current.get('outer-titanium');
+    if (outerShell) {
+      outerShell.traverse(child => {
+        if (child instanceof THREE.Mesh && child.material) {
+          const mat = child.material as THREE.MeshStandardMaterial;
+          mat.opacity = internalView ? 0.35 : 1.0;
+          mat.transparent = internalView;
+          mat.needsUpdate = true;
+        }
+      });
+    }
+  }, [internalView]);
 
   // Update exploded view offsets smoothly based on explodedProgress
   useEffect(() => {

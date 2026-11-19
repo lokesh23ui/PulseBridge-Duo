@@ -43,24 +43,34 @@ export const LiveMonitoringPage: React.FC = () => {
   const activityHistory = recentReadings.map(r => r.activity_percent ?? null);
 
   const handleQuickWokwiInject = async () => {
-    setInjectStatus("Submitting canonical Wokwi ESP32 payload...");
+    const evtId = `PB-EVT-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    const hr = 72 + Math.floor(Math.random() * 8);
+    const spo2 = 97 + Math.floor(Math.random() * 3);
+    const sys = 118 + Math.floor(Math.random() * 8);
+    const dia = 78 + Math.floor(Math.random() * 5);
+    const glucose = 95 + Math.floor(Math.random() * 10);
+    const temp = 36.6 + parseFloat((Math.random() * 0.3).toFixed(1));
+
+    setInjectStatus(`Generating fresh sample reading (${evtId})...`);
     try {
-      const canonical = {
+      const readingPayload = {
+        event_id: evtId,
         device_id: "PB-ESP32-01",
         source: "WOKWI_SIMULATION",
         simulated: true,
-        heart_rate_bpm: 104,
-        spo2_percent: 86,
-        bp_systolic_mmhg: 131,
-        bp_diastolic_mmhg: 89,
-        glucose_mg_dl: 182,
-        temperature_c: 36.8,
-        humidity_percent: 45.0,
-        activity_percent: 45,
-        demo_status: "REVIEW"
+        timestamp: new Date().toISOString(),
+        heart_rate_bpm: hr,
+        spo2_percent: spo2,
+        bp_systolic_mmhg: sys,
+        bp_diastolic_mmhg: dia,
+        glucose_mg_dl: glucose,
+        temperature_c: temp,
+        humidity_percent: 45.0 + Math.floor(Math.random() * 5),
+        activity_percent: 42 + Math.floor(Math.random() * 10),
+        status: "ILLUSTRATIVE_READING"
       };
-      await injectWokwiPayload(canonical);
-      setInjectStatus("Canonical Wokwi payload successfully ingested! Alert evaluated.");
+      await injectWokwiPayload(readingPayload);
+      setInjectStatus(`Fresh sample reading successfully ingested! (Event ${evtId})`);
       setTimeout(() => setInjectStatus(null), 4000);
     } catch (e: any) {
       setInjectStatus(`Ingestion error: ${e.message}`);
@@ -89,19 +99,19 @@ export const LiveMonitoringPage: React.FC = () => {
             <button
               type="button"
               onClick={handleQuickWokwiInject}
-              className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-sky-400 font-mono text-xs font-semibold flex items-center gap-1.5 transition shadow-xs"
+              className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 text-white font-mono text-xs font-semibold flex items-center gap-1.5 transition shadow-xs cursor-pointer"
             >
-              <Cpu className="w-4 h-4 text-sky-400" />
-              Inject Sample Wokwi Payload
+              <Cpu className="w-4 h-4 text-white" />
+              Generate Sample Reading
             </button>
 
             <button
               type="button"
               onClick={() => setIsThresholdModalOpen(true)}
-              className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition"
+              className="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer"
             >
               <Sliders className="w-4 h-4" />
-              Demo Thresholds
+              Configure Thresholds
             </button>
           </div>
         </div>
@@ -121,7 +131,7 @@ export const LiveMonitoringPage: React.FC = () => {
               Active Ingestion Source:
             </span>
             {[
-              { id: 'demo', label: 'Demo Generator' },
+              { id: 'demo', label: 'Simulated Stream' },
               { id: 'ring', label: 'Ring Simulator' },
               { id: 'watch', label: 'Watch Simulator' },
               { id: 'dual', label: 'Dual Wearable' },

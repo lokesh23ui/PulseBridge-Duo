@@ -25,7 +25,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   unit,
   status = 'NORMAL',
   statusLabel,
-  sourceBadge = 'SIMULATED',
+  sourceBadge = 'PREVIEW',
   isSimulated = true,
   isEstimate = false,
   signalQuality,
@@ -169,7 +169,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
         <div className="flex items-center gap-1.5">
           <StatusIcon className={`w-3.5 h-3.5 ${style.text}`} />
           <span className="font-medium text-slate-700">
-            {statusLabel || (hasValue ? 'Within demo range' : 'Sensor offline')}
+            {statusLabel || (hasValue ? 'Within configured range' : 'Sensor offline')}
           </span>
         </div>
 

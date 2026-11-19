@@ -145,8 +145,8 @@ export const HealthInsightsPage: React.FC = () => {
               </>
             )}
           </div>
-          <span className="px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-700 border border-sky-200 text-[11px] font-semibold">
-            All Samples Simulated / Demo
+          <span className="px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200 text-[11px] font-semibold">
+            Preview / Illustrative Telemetry
           </span>
         </div>
       </div>
@@ -266,7 +266,7 @@ export const HealthInsightsPage: React.FC = () => {
           </div>
           <div className="flex justify-between text-[11px] font-mono text-slate-400">
             <span>Dark: Systolic · Light: Diastolic</span>
-            <span className="text-purple-600 font-medium">Demonstration Estimate</span>
+            <span className="text-teal-700 font-medium">Non-invasive PTT Estimate</span>
           </div>
         </div>
 
@@ -302,7 +302,7 @@ export const HealthInsightsPage: React.FC = () => {
           </div>
           <div className="flex justify-between text-[11px] font-mono text-slate-400">
             <span>Range: 70 - 240 mg/dL</span>
-            <span className="text-amber-600 font-medium">CGM Demonstration Placeholder</span>
+            <span className="text-amber-700 font-medium">Non-invasive Optical Preview</span>
           </div>
         </div>
 

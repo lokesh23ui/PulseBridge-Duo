@@ -61,7 +61,7 @@ export const ThresholdsModal: React.FC<ThresholdsModalProps> = ({
               <Sliders className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900 text-base">Demonstration Threshold Settings</h3>
+              <h3 className="font-bold text-slate-900 text-base">Platform Threshold Settings</h3>
               <p className="text-xs text-slate-500">Configure physiological parameters and alert limits</p>
             </div>
           </div>
@@ -141,7 +141,7 @@ export const ThresholdsModal: React.FC<ThresholdsModalProps> = ({
           {/* Estimated Blood Pressure & Glucose */}
           <div className="space-y-3 pt-3 border-t border-slate-100">
             <h4 className="text-xs font-bold font-mono uppercase tracking-wider text-slate-500">
-              Estimated Biomarkers (Demonstration Placeholders)
+              Estimated Biomarkers (Preview Estimation)
             </h4>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>

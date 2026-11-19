@@ -115,7 +115,7 @@ export const SimulationStudioPage: React.FC = () => {
         <div className="pt-4 border-t border-slate-800/80 grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
           <div className="md:col-span-4">
             <label className="block text-[11px] font-mono uppercase tracking-wider text-teal-400 mb-1">
-              Select Demonstration Scenario (1 of 10)
+              Select Clinical Simulation Scenario (1 of 10)
             </label>
             <select
               value={activeScenarioId}

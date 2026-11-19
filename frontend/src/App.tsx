@@ -4,6 +4,7 @@ import { MonitoringProvider } from './context/MonitoringContext';
 import { AuthProvider } from './context/AuthContext';
 import { Header } from './components/Header';
 import { Footer } from './components/Footer';
+import { PulseBridgeAssistant } from './components/PulseBridgeAssistant';
 import { HomePage } from './pages/HomePage';
 import { DevicesExplorerPage } from './pages/DevicesExplorerPage';
 import { RingPage } from './pages/RingPage';
@@ -26,7 +27,7 @@ export const App: React.FC = () => {
     <AuthProvider>
       <MonitoringProvider>
         <BrowserRouter>
-          <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 font-sans selection:bg-blue-500/30">
+          <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans selection:bg-teal-500/20">
             <Header />
             <main className="flex-1">
               <Routes>
@@ -37,7 +38,7 @@ export const App: React.FC = () => {
                 <Route path="/simulation" element={<SimulationStudioPage />} />
                 <Route path="/monitor" element={<LiveMonitoringPage />} />
                 <Route path="/insights" element={<HealthInsightsPage />} />
-                <Route path="/technology" element={<TechnologyPage />} />
+                <Route path="/technology" element={<AboutPage />} />
                 <Route path="/about" element={<AboutPage />} />
 
                 {/* Patient-Caregiver Platform Routes */}
@@ -49,6 +50,7 @@ export const App: React.FC = () => {
               </Routes>
             </main>
             <Footer />
+            <PulseBridgeAssistant />
           </div>
         </BrowserRouter>
       </MonitoringProvider>

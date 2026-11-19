@@ -423,5 +423,22 @@ export const api = {
     });
     if (!res.ok) throw new Error('Failed to mark all notifications read');
     return await res.json();
+  },
+
+  // --- Convenience & Compatibility Methods ---
+  async getMedicalReports(token: string, patientId: number = 0) {
+    return this.getPatientReports(token, patientId);
+  },
+
+  async createMedicalReport(token: string, report: Record<string, any>, patientId: number = 0) {
+    return this.uploadPatientReport(token, patientId, report);
+  },
+
+  async createAlertRule(token: string, patientId: number, rule: Record<string, any>) {
+    return this.createPatientAlertRule(token, patientId, rule);
+  },
+
+  async injectPatientControlledReading(token: string, patientId: number, reading: Record<string, any>) {
+    return this.injectControlledPatientReading(token, patientId, reading);
   }
 };
