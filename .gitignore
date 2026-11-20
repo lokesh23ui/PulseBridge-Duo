@@ -240,6 +240,10 @@ dist-ssr/
 *.sqlite3
 pulsebridge.db
 backend/pulsebridge.db
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
 
 # Patient Uploads & Temporary Media
 uploads/

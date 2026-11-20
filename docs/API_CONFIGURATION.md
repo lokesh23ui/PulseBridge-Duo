@@ -151,3 +151,26 @@ In the PulseBridge Admin Console (`/admin/security`), administrators can inspect
 - **Configured:** Service credentials are present in the server environment and functional.
 - **Missing configuration:** Required environment variables are absent.
 - **Optional integration disabled:** Optional connectors (e.g. Gemini AI or Telegram) are running in deterministic offline fallback mode.
+
+---
+
+## 5. Netlify Production Deployment (Frontend SPA)
+
+PulseBridge Duo's web application is a React 19 + TypeScript Single Page Application (SPA) powered by Vite and `react-router-dom`. When deploying to Netlify:
+
+### 5.1 Architecture & Monorepo Base Directory
+- **Repository Layout:** Monorepo with `frontend/` and `backend/`.
+- **Netlify Build Configuration (`netlify.toml`):**
+  - **Base directory:** `frontend`
+  - **Build command:** `npm run build`
+  - **Publish directory:** `dist` (relative to `frontend/`)
+- **SPA Rewrites (`_redirects`):**
+  Single-page routing requires all incoming URLs to route through `/index.html` with HTTP status `200` to prevent 404 errors on deep links or browser page reloads:
+  ```text
+  /* /index.html 200
+  ```
+  This rule is configured in `frontend/public/_redirects` (automatically copied to `dist/_redirects` by Vite) and redundantly declared in `netlify.toml`.
+
+### 5.2 Environment Variables on Netlify
+In Netlify Site Settings > **Environment variables**:
+- `VITE_API_BASE_URL`: The URL of your deployed FastAPI backend (e.g., `https://api.pulsebridge.health/api`).
