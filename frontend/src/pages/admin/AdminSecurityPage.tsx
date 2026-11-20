@@ -189,6 +189,56 @@ export const AdminSecurityPage: React.FC = () => {
           ))}
         </div>
       </div>
+
+      {/* API Integrations Status Section (Zero Secrets Exposure) */}
+      <div className="bg-white border border-slate-200 rounded-3xl p-6 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <div>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 flex items-center gap-2 font-mono">
+              <Key className="w-4 h-4 text-purple-600" />
+              API Integrations & Credential Status
+            </h3>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              Strict security isolation: API secrets are never displayed. Only server-evaluated operational status is visible.
+            </p>
+          </div>
+          <span className="text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200">
+            Zero Exposure Standard
+          </span>
+        </div>
+
+        <div className="space-y-2.5">
+          {security?.api_integrations?.map((integration, idx) => (
+            <div key={idx} className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <span className="font-bold text-slate-900 text-xs">{integration.name}</span>
+                <span className="text-[10px] text-slate-500 font-mono ml-2">[{integration.type}]</span>
+              </div>
+
+              <div>
+                {integration.status === 'Configured' && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                    Configured
+                  </span>
+                )}
+                {integration.status === 'Missing configuration' && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                    <AlertTriangle className="w-3 h-3 text-rose-600" />
+                    Missing configuration
+                  </span>
+                )}
+                {integration.status === 'Optional integration disabled' && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-mono font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                    <CheckCircle2 className="w-3 h-3 text-slate-500" />
+                    Optional integration disabled
+                  </span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };

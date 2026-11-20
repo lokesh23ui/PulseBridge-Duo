@@ -175,3 +175,4 @@ class SecurityStatusResponse(BaseModel):
     zero_hardcoded_secrets_verified: bool
     offline_deterministic_parser: bool
     uptime_seconds: float
+    api_integrations: List[Dict[str, str]] = []

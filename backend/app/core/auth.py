@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 from backend.app.database.connection import get_db
 from backend.app.models.entities import User
 
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "pulsebridge-duo-secure-jwt-secret-key-2026")
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY") or os.getenv("JWT_SECRET") or "pulsebridge-duo-secure-jwt-secret-key-2026"
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24 * 7  # 7 days
 

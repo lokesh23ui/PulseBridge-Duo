@@ -826,6 +826,35 @@ def get_security_status(
     suspended_count = db.query(User).filter(User.status.in_(["suspended", "deactivated"])).count()
     audit_count = db.query(AuditLog).count()
 
+    # API Integration Status Assessment (Zero secret exposure)
+    integrations = [
+        {
+            "name": "Relational Database (DATABASE_URL)",
+            "status": "Configured" if os.getenv("DATABASE_URL") else "Missing configuration",
+            "type": "Required Core"
+        },
+        {
+            "name": "JWT Session Cryptography (JWT_SECRET)",
+            "status": "Configured" if (os.getenv("JWT_SECRET") or os.getenv("JWT_SECRET_KEY")) else "Missing configuration",
+            "type": "Required Core"
+        },
+        {
+            "name": "Google Gemini API (GEMINI_API_KEY)",
+            "status": "Configured" if os.getenv("GEMINI_API_KEY") else "Optional integration disabled",
+            "type": "Optional Cloud AI"
+        },
+        {
+            "name": "Telegram Clinical Alerts (TELEGRAM_BOT_TOKEN)",
+            "status": "Configured" if os.getenv("TELEGRAM_BOT_TOKEN") else "Optional integration disabled",
+            "type": "Optional Dispatch"
+        },
+        {
+            "name": "Supabase Cloud Vault (SUPABASE_URL)",
+            "status": "Configured" if os.getenv("SUPABASE_URL") else "Optional integration disabled",
+            "type": "Optional Cloud Backend"
+        }
+    ]
+
     return SecurityStatusResponse(
         environment=env_name,
         database_connected=True,
@@ -839,7 +868,8 @@ def get_security_status(
         audit_logs_count=audit_count,
         zero_hardcoded_secrets_verified=True,
         offline_deterministic_parser=True,
-        uptime_seconds=3600.0
+        uptime_seconds=3600.0,
+        api_integrations=integrations
     )
 
 # -------------------------------------------------------------

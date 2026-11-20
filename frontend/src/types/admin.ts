@@ -172,4 +172,9 @@ export interface AdminSecurityStatus {
   zero_hardcoded_secrets_verified: boolean;
   offline_deterministic_parser: boolean;
   uptime_seconds: number;
+  api_integrations?: Array<{
+    name: string;
+    status: 'Configured' | 'Missing configuration' | 'Optional integration disabled';
+    type: string;
+  }>;
 }
