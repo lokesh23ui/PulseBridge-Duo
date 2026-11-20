@@ -7,10 +7,12 @@ interface AuthContextType {
   role: UserRole | null;
   token: string | null;
   isAuthenticated: boolean;
+  isAdmin: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   loginAsDemoPatient: () => Promise<void>;
   loginAsDemoCaregiver: () => Promise<void>;
+  loginAsDemoAdmin: () => Promise<void>;
   register: (payload: Record<string, any>) => Promise<void>;
   logout: () => void;
   // Notifications
@@ -93,6 +95,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     await login('caregiver@pulsebridge.demo', 'PulsePass123!');
   };
 
+  const loginAsDemoAdmin = async () => {
+    await login('admin@pulsebridge.health', 'AdminPulse2026!');
+  };
+
   const register = async (payload: Record<string, any>) => {
     setIsLoading(true);
     try {
@@ -144,10 +150,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role: user?.role || null,
         token,
         isAuthenticated: !!user,
+        isAdmin: user?.role === 'admin',
         isLoading,
         login,
         loginAsDemoPatient,
         loginAsDemoCaregiver,
+        loginAsDemoAdmin,
         register,
         logout,
         notifications,

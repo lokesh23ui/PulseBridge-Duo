@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
+from sqlalchemy import text
 from backend.app.database.connection import engine, Base, SessionLocal
 from backend.app.models.entities import (
     Device, SystemConfig, User, PatientProfile, CaregiverProfile, 
@@ -22,6 +23,9 @@ from backend.app.api.patients_router import router as patients_router
 from backend.app.api.alerts_router import router as alerts_router
 from backend.app.api.notifications_router import router as notifications_router
 from backend.app.api.disease_router import router as disease_router
+from backend.app.api.admin_router import router as admin_router
+from backend.app.models.entities import AFibSymptomCatalog, AFibParameterCatalog
+from backend.app.services.disease_knowledge_base import AFIB_SYMPTOM_CATALOGUE, AFIB_PARAMETER_REFERENCES
 
 def seed_demo_accounts_and_data(db):
     """Seeds Demo Patient and Demo Caregiver for immediate interactive hackathon judging."""
@@ -295,9 +299,45 @@ def seed_demo_accounts_and_data(db):
             ))
     db.commit()
 
+    # 7. Seed System Administrator (Admin Role)
+    admin_user = db.query(User).filter(User.role == "admin").first()
+    if not admin_user:
+        admin_email = os.getenv("ADMIN_EMAIL", "admin@pulsebridge.health").strip().lower()
+        admin_pass = os.getenv("ADMIN_INITIAL_PASSWORD", "AdminPulse2026!")
+        admin_name = os.getenv("ADMIN_FULL_NAME", "PulseBridge System Administrator").strip()
+        admin_user = User(
+            email=admin_email,
+            password_hash=hash_password(admin_pass),
+            full_name=admin_name,
+            role="admin",
+            status="active",
+            is_active=True
+        )
+        db.add(admin_user)
+        db.commit()
+        db.refresh(admin_user)
+
+def run_sqlite_migrations(eng):
+    """Safely adds missing columns to existing SQLite tables if needed."""
+    columns_to_add = [
+        ("users", "status", "VARCHAR(32) DEFAULT 'active'"),
+        ("users", "is_active", "BOOLEAN DEFAULT 1"),
+        ("audit_logs", "target_entity", "VARCHAR(64)"),
+        ("audit_logs", "target_id", "VARCHAR(64)"),
+        ("audit_logs", "status", "VARCHAR(32) DEFAULT 'SUCCESS'")
+    ]
+    with eng.connect() as conn:
+        for tbl, col, col_def in columns_to_add:
+            try:
+                conn.execute(text(f"ALTER TABLE {tbl} ADD COLUMN {col} {col_def}"))
+                conn.commit()
+            except Exception:
+                pass
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize SQLite database schema
+    # Apply schema migrations and initialize tables
+    run_sqlite_migrations(engine)
     Base.metadata.create_all(bind=engine)
 
     db = SessionLocal()
@@ -326,9 +366,54 @@ async def lifespan(app: FastAPI):
                 config_key="thresholds",
                 config_value=DEFAULT_THRESHOLDS.model_dump()
             ))
+
+        # Seed application settings
+        if not db.query(SystemConfig).filter(SystemConfig.config_key == "app_settings").first():
+            db.add(SystemConfig(
+                config_key="app_settings",
+                config_value={
+                    "app_name": "PulseBridge Duo",
+                    "support_email": "support@pulsebridge.health",
+                    "maintenance_mode": False,
+                    "maintenance_message": "PulseBridge Duo is undergoing routine system maintenance. Please check back shortly.",
+                    "allow_public_registration": True,
+                    "ai_features_enabled": False
+                }
+            ))
+
+        # Seed AFib Symptoms Catalog if empty
+        if db.query(AFibSymptomCatalog).count() == 0:
+            for idx, sym in enumerate(AFIB_SYMPTOM_CATALOGUE):
+                db.add(AFibSymptomCatalog(
+                    symptom_key=sym["id"],
+                    name=sym["name"],
+                    description=sym.get("short_description", sym["name"]),
+                    typical_severity="Moderate",
+                    clinical_significance=sym.get("clinical_note", ""),
+                    is_primary=bool(sym.get("is_primary", False) or idx == 0),
+                    is_active=True,
+                    sort_order=idx + 1
+                ))
+
+        # Seed AFib Parameters Catalog if empty
+        if db.query(AFibParameterCatalog).count() == 0:
+            param_keys = ["heart_rhythm_ecg", "heart_rate", "hrv", "spo2"]
+            for idx, p in enumerate(AFIB_PARAMETER_REFERENCES):
+                db.add(AFibParameterCatalog(
+                    parameter_key=param_keys[idx] if idx < len(param_keys) else f"param_{idx}",
+                    name=p["parameter_name"],
+                    unit=p.get("unit"),
+                    normal_range=p.get("reference_range", "Normal sinus rhythm / physiological baseline"),
+                    clinical_role=p["clinical_role"],
+                    limitations=p.get("clinical_limitation"),
+                    afib_relevance=p["clinical_relevance"],
+                    sort_order=idx + 1,
+                    is_active=True
+                ))
+
         db.commit()
 
-        # Seed Demo Patient & Caregiver Accounts
+        # Seed Demo Patient, Caregiver & Admin Accounts
         seed_demo_accounts_and_data(db)
 
     finally:
@@ -358,6 +443,7 @@ app.include_router(patients_router, prefix="/api")
 app.include_router(alerts_router, prefix="/api")
 app.include_router(notifications_router, prefix="/api")
 app.include_router(disease_router, prefix="/api")
+app.include_router(admin_router, prefix="/api")
 app.include_router(api_router, prefix="/api")
 
 # WebSocket Endpoint

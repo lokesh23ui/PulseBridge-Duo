@@ -1,4 +1,4 @@
-export type UserRole = 'patient' | 'caregiver';
+export type UserRole = 'patient' | 'caregiver' | 'admin';
 
 export interface PatientProfile {
   id: number;
@@ -24,6 +24,8 @@ export interface User {
   email: string;
   role: UserRole;
   full_name: string;
+  status?: string;
+  is_active?: boolean;
   created_at: string;
   patient_profile?: PatientProfile;
   caregiver_profile?: CaregiverProfile;

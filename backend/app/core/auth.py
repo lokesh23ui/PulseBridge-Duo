@@ -72,6 +72,11 @@ def get_current_user(
             detail="User not found",
             headers={"WWW-Authenticate": "Bearer"},
         )
+    if hasattr(user, "is_active") and not user.is_active or hasattr(user, "status") and user.status in ("suspended", "deactivated"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Account has been {user.status or 'deactivated'}. Please contact your system administrator."
+        )
     return user
 
 def get_optional_user(
@@ -103,3 +108,4 @@ def require_role(allowed_roles: list[str]):
 
 require_patient = require_role(["patient"])
 require_caregiver = require_role(["caregiver"])
+require_admin = require_role(["admin"])

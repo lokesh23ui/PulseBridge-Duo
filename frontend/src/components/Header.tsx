@@ -1,13 +1,13 @@
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Activity, ChevronRight, Users, FileText, UserCheck, LogOut, LogIn } from 'lucide-react';
+import { Activity, ChevronRight, Users, FileText, UserCheck, LogOut, LogIn, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { NotificationBell } from './NotificationBell';
 
 export const Header: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, role, isAuthenticated, logout, loginAsDemoPatient, loginAsDemoCaregiver } = useAuth();
+  const { user, role, isAuthenticated, logout, loginAsDemoPatient, loginAsDemoCaregiver, loginAsDemoAdmin } = useAuth();
 
   const navLinks = [
     { name: 'Home', path: '/' },
@@ -29,6 +29,10 @@ export const Header: React.FC = () => {
   } else if (role === 'caregiver') {
     roleLinks.push(
       { name: 'My Patients', path: '/family', icon: Users }
+    );
+  } else if (role === 'admin') {
+    roleLinks.push(
+      { name: 'Admin Console', path: '/admin', icon: ShieldCheck }
     );
   }
 
@@ -106,6 +110,8 @@ export const Header: React.FC = () => {
                   <span className={`text-[10px] font-mono uppercase tracking-wider px-1.5 py-0.2 rounded font-semibold ${
                     role === 'patient' 
                       ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' 
+                      : role === 'admin'
+                      ? 'bg-purple-50 text-purple-700 border border-purple-200'
                       : 'bg-teal-50 text-teal-700 border border-teal-200'
                   }`}>
                     {role}

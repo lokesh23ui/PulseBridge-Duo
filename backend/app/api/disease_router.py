@@ -10,7 +10,7 @@ from backend.app.database.connection import get_db
 from backend.app.core.auth import get_current_user
 from backend.app.models.entities import (
     User, PatientProfile, MedicalReport, SensorReading, HealthAlert,
-    PatientSymptom, DiseaseAnalysisRecord, utc_now
+    PatientSymptom, DiseaseAnalysisRecord, SystemConfig, AFibSymptomCatalog, AFibParameterCatalog, utc_now
 )
 from backend.app.api.patients_router import verify_access_to_patient, resolve_patient_user_id
 from backend.app.services.disease_knowledge_base import (
@@ -50,18 +50,72 @@ def get_disease_detail(disease_id: str):
     return d
 
 @router.get("/afib-overview")
-def get_afib_overview():
-    """Returns complete Atrial Fibrillation overview: clinical background, global stats, parameter reference tables, and 11-symptom catalogue."""
-    return get_afib_overview_data()
+def get_afib_overview(db: Session = Depends(get_db)):
+    """Returns complete Atrial Fibrillation overview: clinical background, global stats, parameter reference tables, and symptom catalogue."""
+    cfg = db.query(SystemConfig).filter(SystemConfig.config_key == "afib_knowledge").first()
+    disease_info = cfg.config_value if (cfg and isinstance(cfg.config_value, dict)) else ATRIAL_FIBRILLATION_KNOWLEDGE_ITEM
+
+    # Symptoms from DB catalog
+    db_symptoms = db.query(AFibSymptomCatalog).filter(AFibSymptomCatalog.is_active == True).order_by(AFibSymptomCatalog.sort_order).all()
+    if db_symptoms:
+        symptoms_list = [
+            {
+                "id": s.symptom_key,
+                "name": s.name,
+                "short_description": s.description,
+                "clinical_note": s.clinical_significance or "",
+                "is_primary": s.is_primary
+            }
+            for s in db_symptoms
+        ]
+    else:
+        symptoms_list = AFIB_SYMPTOM_CATALOGUE
+
+    # Parameters from DB catalog
+    db_params = db.query(AFibParameterCatalog).filter(AFibParameterCatalog.is_active == True).order_by(AFibParameterCatalog.sort_order).all()
+    if db_params:
+        params_list = [
+            {
+                "parameter_name": p.name,
+                "clinical_role": p.clinical_role,
+                "unit": p.unit or "",
+                "data_source": "Verified patient records",
+                "clinical_limitation": p.limitations or "",
+                "clinical_relevance": p.afib_relevance,
+                "is_diagnostic": (p.parameter_key == "heart_rhythm_ecg")
+            }
+            for p in db_params
+        ]
+    else:
+        params_list = AFIB_PARAMETER_REFERENCES
+
+    return {
+        "disease_info": disease_info,
+        "global_statistics": GLOBAL_AFIB_STATISTICS,
+        "parameter_references": params_list,
+        "symptoms": symptoms_list
+    }
 
 @router.get("/diabetes-overview")
-def get_diabetes_overview_legacy():
+def get_diabetes_overview_legacy(db: Session = Depends(get_db)):
     """Legacy redirect/alias returning AFib overview data."""
-    return get_afib_overview_data()
+    return get_afib_overview(db)
 
 @router.get("/symptom-catalogue")
-def get_symptom_catalogue():
-    """Returns the 11 AFib symptom catalogue with 'Irregular heartbeat rhythm' as primary."""
+def get_symptom_catalogue(db: Session = Depends(get_db)):
+    """Returns the AFib symptom catalogue with 'Irregular heartbeat rhythm' as primary."""
+    db_symptoms = db.query(AFibSymptomCatalog).filter(AFibSymptomCatalog.is_active == True).order_by(AFibSymptomCatalog.sort_order).all()
+    if db_symptoms:
+        return [
+            {
+                "id": s.symptom_key,
+                "name": s.name,
+                "short_description": s.description,
+                "clinical_note": s.clinical_significance or "",
+                "is_primary": s.is_primary
+            }
+            for s in db_symptoms
+        ]
     return AFIB_SYMPTOM_CATALOGUE
 
 # -------------------------------------------------------------

@@ -47,6 +47,8 @@ class UserResponse(BaseModel):
     email: str
     role: str
     full_name: str
+    status: Optional[str] = "active"
+    is_active: Optional[bool] = True
     created_at: datetime
     patient_profile: Optional[PatientProfileResponse] = None
     caregiver_profile: Optional[CaregiverProfileResponse] = None

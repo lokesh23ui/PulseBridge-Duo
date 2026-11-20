@@ -18,8 +18,10 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(128), unique=True, index=True, nullable=False)
     password_hash = Column(String(256), nullable=False)
-    role = Column(String(32), nullable=False)  # "patient" or "caregiver"
+    role = Column(String(32), nullable=False)  # "patient", "caregiver", "admin"
     full_name = Column(String(128), nullable=False)
+    status = Column(String(32), default="active", nullable=False)  # "active", "suspended", "deactivated"
+    is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=utc_now)
 
     patient_profile = relationship("PatientProfile", back_populates="user", uselist=False, cascade="all, delete-orphan")
@@ -186,9 +188,58 @@ class AuditLog(Base):
     id = Column(Integer, primary_key=True, index=True)
     actor_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     target_patient_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    target_entity = Column(String(64), nullable=True)  # "patient", "caregiver", "afib_knowledge", "symptom", "parameter", "settings", "notification", "report"
+    target_id = Column(String(64), nullable=True)
     action = Column(String(64), nullable=False)
     details = Column(JSON, nullable=True)
+    status = Column(String(32), default="SUCCESS")  # "SUCCESS", "FAILURE", "WARNING"
     timestamp = Column(DateTime, default=utc_now)
+
+    actor = relationship("User", foreign_keys=[actor_user_id])
+
+class SystemAnnouncement(Base):
+    __tablename__ = "system_announcements"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(256), nullable=False)
+    message = Column(Text, nullable=False)
+    announcement_type = Column(String(32), default="info")  # "info", "warning", "maintenance", "urgent"
+    target_audience = Column(String(32), default="all")  # "all", "patient", "caregiver"
+    is_active = Column(Boolean, default=True)
+    created_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    expires_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=utc_now)
+
+    creator = relationship("User", foreign_keys=[created_by_user_id])
+
+class AFibSymptomCatalog(Base):
+    __tablename__ = "afib_symptoms_catalog"
+
+    id = Column(Integer, primary_key=True, index=True)
+    symptom_key = Column(String(64), unique=True, index=True, nullable=False)
+    name = Column(String(128), nullable=False)
+    description = Column(Text, nullable=False)
+    typical_severity = Column(String(32), default="Moderate")  # "Mild", "Moderate", "Severe"
+    clinical_significance = Column(Text, nullable=True)
+    is_primary = Column(Boolean, default=False)
+    is_active = Column(Boolean, default=True)
+    sort_order = Column(Integer, default=0)
+    updated_at = Column(DateTime, default=utc_now)
+
+class AFibParameterCatalog(Base):
+    __tablename__ = "afib_parameters_catalog"
+
+    id = Column(Integer, primary_key=True, index=True)
+    parameter_key = Column(String(64), unique=True, index=True, nullable=False)
+    name = Column(String(128), nullable=False)
+    unit = Column(String(32), nullable=True)
+    normal_range = Column(String(64), nullable=True)
+    clinical_role = Column(Text, nullable=False)
+    limitations = Column(Text, nullable=True)
+    afib_relevance = Column(Text, nullable=False)
+    sort_order = Column(Integer, default=0)
+    is_active = Column(Boolean, default=True)
+    updated_at = Column(DateTime, default=utc_now)
 
 # -------------------------------------------------------------
 # CORE IOT HARDWARE & TELEMETRY MODELS (PRESERVED)

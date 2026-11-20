@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
-  const { login, loginAsDemoPatient, loginAsDemoCaregiver } = useAuth();
+  const { login, loginAsDemoPatient, loginAsDemoCaregiver, loginAsDemoAdmin } = useAuth();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -57,6 +57,19 @@ export const LoginPage: React.FC = () => {
     }
   };
 
+  const handleAdminProfile = async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      await loginAsDemoAdmin();
+      navigate('/admin');
+    } catch (err: any) {
+      setError(err.message || 'Admin sign in failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-slate-50 text-slate-900">
       <div className="max-w-md w-full space-y-7">
@@ -85,23 +98,23 @@ export const LoginPage: React.FC = () => {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
             {/* Patient Profile */}
             <button
               type="button"
               onClick={handlePatientProfile}
               disabled={loading}
-              className="p-3.5 rounded-2xl bg-emerald-50/60 border border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50 text-left transition-all group hover:scale-[1.01] cursor-pointer"
+              className="p-3 rounded-2xl bg-emerald-50/60 border border-emerald-200 hover:border-emerald-400 hover:bg-emerald-50 text-left transition-all group hover:scale-[1.01] cursor-pointer"
             >
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-bold text-emerald-800 flex items-center gap-1">
                   <HeartPulse className="w-3.5 h-3.5 text-emerald-600" />
                   Patient
                 </span>
-                <span className="text-[10px] text-slate-500 font-mono">Age 72</span>
+                <span className="text-[10px] text-slate-500 font-mono">Demo</span>
               </div>
-              <p className="text-xs font-bold text-slate-900">Eleanor Vance</p>
-              <p className="text-[11px] text-slate-600 mt-0.5">Vitals vault, invites & permissions</p>
+              <p className="text-xs font-bold text-slate-900 truncate">Eleanor Vance</p>
+              <p className="text-[10px] text-slate-600 mt-0.5 line-clamp-1">Vitals & records</p>
             </button>
 
             {/* Caregiver Profile */}
@@ -109,17 +122,35 @@ export const LoginPage: React.FC = () => {
               type="button"
               onClick={handleCaregiverProfile}
               disabled={loading}
-              className="p-3.5 rounded-2xl bg-teal-50/60 border border-teal-200 hover:border-teal-400 hover:bg-teal-50 text-left transition-all group hover:scale-[1.01] cursor-pointer"
+              className="p-3 rounded-2xl bg-teal-50/60 border border-teal-200 hover:border-teal-400 hover:bg-teal-50 text-left transition-all group hover:scale-[1.01] cursor-pointer"
             >
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-bold text-teal-800 flex items-center gap-1">
                   <User className="w-3.5 h-3.5 text-teal-600" />
                   Caregiver
                 </span>
-                <span className="text-[10px] text-slate-500 font-mono">Son</span>
+                <span className="text-[10px] text-slate-500 font-mono">Demo</span>
               </div>
-              <p className="text-xs font-bold text-slate-900">Marcus Vance</p>
-              <p className="text-[11px] text-slate-600 mt-0.5">Shared monitor, alerts & reports</p>
+              <p className="text-xs font-bold text-slate-900 truncate">Marcus Vance</p>
+              <p className="text-[10px] text-slate-600 mt-0.5 line-clamp-1">Shared monitor</p>
+            </button>
+
+            {/* Administrator Profile */}
+            <button
+              type="button"
+              onClick={handleAdminProfile}
+              disabled={loading}
+              className="p-3 rounded-2xl bg-purple-50/60 border border-purple-200 hover:border-purple-400 hover:bg-purple-50 text-left transition-all group hover:scale-[1.01] cursor-pointer"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs font-bold text-purple-800 flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-purple-600" />
+                  Admin
+                </span>
+                <span className="text-[10px] text-purple-600 font-mono font-bold">Root</span>
+              </div>
+              <p className="text-xs font-bold text-slate-900 truncate">SysAdmin</p>
+              <p className="text-[10px] text-slate-600 mt-0.5 line-clamp-1">Console & security</p>
             </button>
           </div>
         </div>

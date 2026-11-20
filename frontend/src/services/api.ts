@@ -578,5 +578,234 @@ export const api = {
     });
     if (!res.ok) throw new Error('Failed to fetch analysis detail');
     return await res.json();
+  },
+
+  // =============================================================
+  // ADMINISTRATION API (PROTECTED: ROLE = ADMIN)
+  // =============================================================
+  async getAdminStats(token: string) {
+    const res = await fetch(`${API_BASE}/admin/stats`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to fetch admin stats');
+    return await res.json();
+  },
+
+  async getAdminPatients(token: string, search?: string, statusFilter?: string) {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (statusFilter) params.append('status_filter', statusFilter);
+    const res = await fetch(`${API_BASE}/admin/patients?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to fetch patients list');
+    return await res.json();
+  },
+
+  async getAdminPatientDetail(token: string, patientId: number) {
+    const res = await fetch(`${API_BASE}/admin/patients/${patientId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to fetch patient detail');
+    return await res.json();
+  },
+
+  async updateAdminPatientStatus(token: string, patientId: number, status: string, reason?: string) {
+    const res = await fetch(`${API_BASE}/admin/patients/${patientId}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ status, reason })
+    });
+    if (!res.ok) throw new Error('Failed to update patient status');
+    return await res.json();
+  },
+
+  async getAdminCaregivers(token: string, search?: string) {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    const res = await fetch(`${API_BASE}/admin/caregivers?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to fetch caregivers list');
+    return await res.json();
+  },
+
+  async updateAdminCaregiverStatus(token: string, caregiverId: number, status: string, reason?: string) {
+    const res = await fetch(`${API_BASE}/admin/caregivers/${caregiverId}/status`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify({ status, reason })
+    });
+    if (!res.ok) throw new Error('Failed to update caregiver status');
+    return await res.json();
+  },
+
+  async getAdminAFibKnowledge(token: string) {
+    const res = await fetch(`${API_BASE}/admin/afib-knowledge`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to fetch AFib knowledge');
+    return await res.json();
+  },
+
+  async updateAdminAFibKnowledge(token: string, payload: any) {
+    const res = await fetch(`${API_BASE}/admin/afib-knowledge`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Failed to update AFib knowledge');
+    return await res.json();
+  },
+
+  async getAdminSymptoms(token: string) {
+    const res = await fetch(`${API_BASE}/admin/symptoms`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to fetch symptoms catalog');
+    return await res.json();
+  },
+
+  async updateAdminSymptom(token: string, key: string, payload: any) {
+    const res = await fetch(`${API_BASE}/admin/symptoms/${key}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Failed to update symptom' }));
+      throw new Error(err.detail || 'Failed to update symptom');
+    }
+    return await res.json();
+  },
+
+  async getAdminParameters(token: string) {
+    const res = await fetch(`${API_BASE}/admin/parameters`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to fetch health parameters');
+    return await res.json();
+  },
+
+  async updateAdminParameter(token: string, key: string, payload: any) {
+    const res = await fetch(`${API_BASE}/admin/parameters/${key}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Failed to update health parameter');
+    return await res.json();
+  },
+
+  async getAdminReports(token: string, search?: string, category?: string) {
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (category) params.append('category', category);
+    const res = await fetch(`${API_BASE}/admin/reports?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to fetch medical reports');
+    return await res.json();
+  },
+
+  async getAdminReportDetail(token: string, reportId: number) {
+    const res = await fetch(`${API_BASE}/admin/reports/${reportId}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to fetch report detail');
+    return await res.json();
+  },
+
+  async getAdminAnnouncements(token: string) {
+    const res = await fetch(`${API_BASE}/admin/announcements`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to fetch announcements');
+    return await res.json();
+  },
+
+  async createAdminAnnouncement(token: string, payload: any) {
+    const res = await fetch(`${API_BASE}/admin/announcements`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) throw new Error('Failed to create announcement');
+    return await res.json();
+  },
+
+  async toggleAdminAnnouncementStatus(token: string, announcementId: number, isActive: boolean) {
+    const res = await fetch(`${API_BASE}/admin/announcements/${announcementId}/status?is_active=${isActive}`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to update announcement status');
+    return await res.json();
+  },
+
+  async getAdminAuditLogs(token: string, targetEntity?: string, action?: string) {
+    const params = new URLSearchParams();
+    if (targetEntity) params.append('target_entity', targetEntity);
+    if (action) params.append('action', action);
+    const res = await fetch(`${API_BASE}/admin/audit-logs?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to fetch audit logs');
+    return await res.json();
+  },
+
+  async getAdminSettings(token: string) {
+    const res = await fetch(`${API_BASE}/admin/settings`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to fetch settings');
+    return await res.json();
+  },
+
+  async updateAdminSettings(token: string, settings: any) {
+    const res = await fetch(`${API_BASE}/admin/settings`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(settings)
+    });
+    if (!res.ok) throw new Error('Failed to update settings');
+    return await res.json();
+  },
+
+  async getAdminSecurityStatus(token: string) {
+    const res = await fetch(`${API_BASE}/admin/security-status`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) throw new Error('Failed to fetch security status');
+    return await res.json();
+  },
+
+  async getActiveAnnouncements(token: string) {
+    const res = await fetch(`${API_BASE}/admin/public/active-announcements`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) return [];
+    return await res.json();
   }
 };
